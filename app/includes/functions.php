@@ -206,23 +206,162 @@ function paginate(int $total, int $page, int $perPage, string $baseUrl): string
 }
 
 // ── Mail ───────────────────────────────────────────────────
+
+/**
+ * Send an HTML email.
+ *
+ * Priority:
+ *  1. Native SMTP via stream_socket_client (no dependencies) when SMTP_HOST + SMTP_USER are set
+ *  2. PHP mail() if available and SMTP not configured
+ *  3. error_log fallback so the app never crashes on missing mail config
+ */
 function sendMail(string $to, string $subject, string $htmlBody): bool
 {
-    $from    = MAIL_FROM;
-    $fromName = MAIL_FROM_NAME;
-    $headers  = implode("\r\n", [
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=UTF-8',
-        'From: ' . $fromName . ' <' . $from . '>',
-        'Reply-To: ' . $from,
-        'X-Mailer: SportsInfraX',
+    // ── Option 1: SMTP ────────────────────────────────────
+    if (SMTP_HOST !== '' && SMTP_USER !== '') {
+        return _smtpSend(SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE,
+                         MAIL_FROM, MAIL_FROM_NAME, $to, $subject, $htmlBody);
+    }
+
+    // ── Option 2: PHP mail() if available ─────────────────
+    if (function_exists('mail')) {
+        $headers = implode("\r\n", [
+            'MIME-Version: 1.0',
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . MAIL_FROM_NAME . ' <' . MAIL_FROM . '>',
+            'Reply-To: ' . MAIL_FROM,
+            'X-Mailer: SportsInfraX',
+        ]);
+        $result = @mail($to, $subject, $htmlBody, $headers);
+        if (!$result) {
+            error_log("SportsInfraX mail(): failed to={$to} subject={$subject}");
+        }
+        return (bool)$result;
+    }
+
+    // ── Option 3: Log only (no crash) ─────────────────────
+    error_log("SportsInfraX mail not sent (no driver configured). to={$to} subject={$subject}");
+    return false;
+}
+
+/**
+ * Native PHP SMTP mailer — no external libraries required.
+ * Supports STARTTLS (port 587) and direct SSL (port 465).
+ */
+function _smtpSend(
+    string $host, int $port, string $user, string $pass, string $secure,
+    string $from, string $fromName,
+    string $to, string $subject, string $htmlBody
+): bool {
+    $errPrefix = "SportsInfraX SMTP ({$host}:{$port})";
+
+    // Build SSL context (allow self-signed certs common on shared hosting)
+    $ctx = stream_context_create([
+        'ssl' => [
+            'verify_peer'       => false,
+            'verify_peer_name'  => false,
+            'allow_self_signed' => true,
+        ],
     ]);
 
-    $result = @mail($to, $subject, $htmlBody, $headers);
-    if (!$result) {
-        error_log("Mail failed: to={$to}, subject={$subject}");
+    // For port 465 use ssl:// wrapper (implicit TLS)
+    $addr = ($secure === 'ssl' ? 'ssl://' : '') . $host . ':' . $port;
+
+    $fp = @stream_socket_client($addr, $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $ctx);
+    if (!$fp) {
+        error_log("{$errPrefix}: connect failed – {$errstr} ({$errno})");
+        return false;
     }
-    return $result;
+    stream_set_timeout($fp, 30);
+
+    // Read one response line (possibly multi-line)
+    $read = function () use ($fp): string {
+        $resp = '';
+        while (($line = fgets($fp, 515)) !== false) {
+            $resp .= $line;
+            if (isset($line[3]) && $line[3] === ' ') break;  // "XYZ " = last line
+        }
+        return $resp;
+    };
+
+    // Send a command and return the server response
+    $cmd = function (string $c) use ($fp, $read): string {
+        fwrite($fp, $c . "\r\n");
+        return $read();
+    };
+
+    $ehlo = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+    $read();                               // greeting
+    $cmd("EHLO {$ehlo}");                  // initial EHLO
+
+    // STARTTLS upgrade for port 587
+    if ($secure === 'tls') {
+        $resp = $cmd('STARTTLS');
+        if (strpos($resp, '220') === false) {
+            error_log("{$errPrefix}: STARTTLS rejected – {$resp}");
+            fclose($fp);
+            return false;
+        }
+        if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+            error_log("{$errPrefix}: TLS handshake failed");
+            fclose($fp);
+            return false;
+        }
+        $cmd("EHLO {$ehlo}");              // re-identify after TLS
+    }
+
+    // AUTH LOGIN
+    $cmd('AUTH LOGIN');
+    $cmd(base64_encode($user));
+    $authResp = $cmd(base64_encode($pass));
+    if (substr(trim($authResp), 0, 3) !== '235') {
+        error_log("{$errPrefix}: AUTH failed – {$authResp}");
+        fclose($fp);
+        return false;
+    }
+
+    $cmd("MAIL FROM:<{$from}>");
+    $rcpt = $cmd("RCPT TO:<{$to}>");
+    if (substr(trim($rcpt), 0, 1) !== '2') {
+        error_log("{$errPrefix}: RCPT TO rejected – {$rcpt}");
+        fclose($fp);
+        return false;
+    }
+
+    $cmd('DATA');
+
+    // Encode subject and From header as RFC 2047 UTF-8
+    $encSubject  = '=?UTF-8?B?' . base64_encode($subject)  . '?=';
+    $encFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
+    $msgId       = '<' . uniqid('si', true) . '@' . $ehlo . '>';
+    $date        = date('r');
+
+    $headers  = "Date: {$date}\r\n";
+    $headers .= "Message-ID: {$msgId}\r\n";
+    $headers .= "From: {$encFromName} <{$from}>\r\n";
+    $headers .= "To: {$to}\r\n";
+    $headers .= "Subject: {$encSubject}\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $headers .= "Content-Transfer-Encoding: base64\r\n";
+    $headers .= "X-Mailer: SportsInfraX\r\n";
+
+    // Dot-stuff body lines per RFC 5321 §4.5.2, then send as base64
+    $body = chunk_split(base64_encode($htmlBody));
+
+    fwrite($fp, $headers . "\r\n" . $body . "\r\n.\r\n");
+
+    $dataResp = $read();
+    $cmd('QUIT');
+    fclose($fp);
+
+    if (substr(trim($dataResp), 0, 3) !== '250') {
+        error_log("{$errPrefix}: DATA rejected – {$dataResp}");
+        return false;
+    }
+
+    return true;
 }
 
 function mailWelcome(string $to, string $name, string $institutionName, string $password): bool

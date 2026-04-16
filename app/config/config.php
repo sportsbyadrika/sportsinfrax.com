@@ -44,18 +44,25 @@ define('ALLOWED_DOCS',    ['application/pdf', 'image/jpeg', 'image/png']);
 define('SESSION_LIFETIME', 7200); // 2 hours
 
 // ── Mail Configuration ─────────────────────────────────────
-// Uses PHP's mail() by default; configure SMTP via php.ini or
-// swap in PHPMailer by setting MAIL_DRIVER = 'smtp'
-define('MAIL_DRIVER', 'mail');   // 'mail' | 'smtp'
-define('MAIL_FROM',   APP_EMAIL);
-define('MAIL_FROM_NAME', APP_NAME);
+// SMTP is used when SMTP_HOST + SMTP_USER are set.
+// Falls back to PHP mail() if available, otherwise logs only.
+//
+// *** SET THESE FOR YOUR HOSTING ACCOUNT ***
+// Typical cPanel/shared hosting values:
+//   SMTP_HOST = mail.yourdomain.com  (or smtp.gmail.com etc.)
+//   SMTP_PORT = 587  (STARTTLS) | 465 (SSL) | 25
+//   SMTP_USER = noreply@yourdomain.com
+//   SMTP_PASS = your-email-password
+//   SMTP_SECURE = tls  (for port 587) | ssl (for port 465) | '' (for port 25)
+//
+define('MAIL_FROM',      getenv('MAIL_FROM')      ?: APP_EMAIL);
+define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: APP_NAME);
 
-// SMTP settings (used when MAIL_DRIVER = 'smtp')
-define('SMTP_HOST',     getenv('SMTP_HOST')     ?: 'smtp.example.com');
-define('SMTP_PORT',     getenv('SMTP_PORT')     ?: 587);
-define('SMTP_USER',     getenv('SMTP_USER')     ?: '');
-define('SMTP_PASS',     getenv('SMTP_PASS')     ?: '');
-define('SMTP_SECURE',   getenv('SMTP_SECURE')   ?: 'tls');
+define('SMTP_HOST',   getenv('SMTP_HOST')   ?: '');          // e.g. mail.sportsinfrax.com
+define('SMTP_PORT',   (int)(getenv('SMTP_PORT')   ?: 587));
+define('SMTP_USER',   getenv('SMTP_USER')   ?: '');          // e.g. noreply@sportsinfrax.com
+define('SMTP_PASS',   getenv('SMTP_PASS')   ?: '');
+define('SMTP_SECURE', getenv('SMTP_SECURE') ?: 'tls');       // 'tls' | 'ssl' | ''
 
 // ── Timezone ───────────────────────────────────────────────
 date_default_timezone_set('Asia/Kolkata');
