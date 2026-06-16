@@ -18,4 +18,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/notifications.php';
+require_once __DIR__ . '/includes/approval.php';
+require_once __DIR__ . '/includes/messaging.php';
 require_once __DIR__ . '/includes/auth_check.php';

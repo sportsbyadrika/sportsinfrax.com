@@ -96,8 +96,76 @@ $navItems = match($userRole) {
         <?php endforeach; ?>
       </ul>
 
-      <!-- Right: Role badge + Avatar dropdown -->
-      <div class="d-flex align-items-center gap-3 mb-2 mb-lg-0">
+      <!-- Right: Bell · Chat · Role badge · Avatar -->
+      <div class="d-flex align-items-center gap-2 mb-2 mb-lg-0">
+
+        <?php if (isLoggedIn()):
+          $navNotifCount = getUnreadNotificationCount(authId());
+          $navNotifs     = getRecentNotifications(authId(), 8);
+        ?>
+        <!-- Bell: Notifications -->
+        <div class="dropdown">
+          <button class="btn btn-sm btn-outline-light border-0 position-relative p-1 px-2"
+                  type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+            <i class="bi bi-bell-fill fs-5"></i>
+            <?php if ($navNotifCount > 0): ?>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                  style="font-size:.6rem;"><?= min(99, $navNotifCount) ?></span>
+            <?php endif; ?>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end shadow"
+               style="min-width:300px;max-width:340px;max-height:420px;overflow-y:auto;">
+            <div class="dropdown-header d-flex justify-content-between align-items-center py-2">
+              <span class="fw-semibold">Notifications</span>
+              <?php if ($navNotifCount > 0): ?>
+              <span class="badge bg-primary rounded-pill"><?= $navNotifCount ?> new</span>
+              <?php endif; ?>
+            </div>
+            <div class="dropdown-divider my-0"></div>
+            <?php if ($navNotifs): foreach ($navNotifs as $nv): ?>
+            <a class="dropdown-item py-2 px-3 <?= $nv['is_read'] ? 'text-muted' : '' ?>"
+               href="<?= h(BASE_URL . '/app/notifications?read_id=' . $nv['id']
+                         . ($nv['link'] ? '&to=' . urlencode(parse_url($nv['link'], PHP_URL_PATH)
+                            . (parse_url($nv['link'], PHP_URL_QUERY) ? '?' . parse_url($nv['link'], PHP_URL_QUERY) : '')) : '')) ?>"
+               style="white-space:normal;font-size:.82rem;">
+              <div class="d-flex gap-2 align-items-start">
+                <i class="bi <?= notificationIcon($nv['type']) ?> mt-1 flex-shrink-0"></i>
+                <div class="flex-grow-1 min-w-0">
+                  <div class="<?= $nv['is_read'] ? '' : 'fw-semibold' ?> text-truncate"><?= h($nv['title']) ?></div>
+                  <div class="text-muted" style="font-size:.7rem;"><?= fmtDate($nv['created_at'], 'd M, H:i') ?></div>
+                </div>
+                <?php if (!$nv['is_read']): ?>
+                <span class="flex-shrink-0 rounded-circle bg-primary mt-1"
+                      style="width:7px;height:7px;display:block;"></span>
+                <?php endif; ?>
+              </div>
+            </a>
+            <?php endforeach; else: ?>
+            <div class="dropdown-item text-muted text-center py-3" style="font-size:.82rem;">No notifications</div>
+            <?php endif; ?>
+            <div class="dropdown-divider my-0"></div>
+            <a class="dropdown-item text-center text-primary py-2"
+               href="<?= h(BASE_URL . '/app/notifications') ?>" style="font-size:.8rem;">
+              View All
+            </a>
+          </div>
+        </div>
+
+        <!-- Chat: Messages (institution users only) -->
+        <?php if (in_array($userRole, ['institution_admin','staff'])):
+          $navMsgCount = getUnreadMessageCount(authId());
+        ?>
+        <a href="<?= h(BASE_URL . '/app/messages') ?>"
+           class="btn btn-sm btn-outline-light border-0 position-relative p-1 px-2" title="Messages">
+          <i class="bi bi-chat-dots-fill fs-5"></i>
+          <?php if ($navMsgCount > 0): ?>
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                style="font-size:.6rem;"><?= min(99, $navMsgCount) ?></span>
+          <?php endif; ?>
+        </a>
+        <?php endif; ?>
+        <?php endif; // isLoggedIn ?>
+
         <span class="nav-role-badge <?= $userRole ?>">
           <?= match($userRole) {
             'super_admin'       => '<i class="bi bi-shield-fill-check me-1"></i>Super Admin',
