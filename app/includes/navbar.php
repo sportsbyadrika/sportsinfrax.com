@@ -1,50 +1,69 @@
 <?php
 /**
  * SportsInfraX – Application Navbar
- * Horizontal nav with role-based menus and avatar dropdown.
+ * Horizontal nav with section-based menus and avatar dropdown.
  */
-$currentUrl  = $_SERVER['REQUEST_URI'] ?? '';
-$userRole    = authRole();
-$userName    = authName();
-$userEmail   = authEmail();
-$instId      = authInstId();
+$currentUrl = $_SERVER['REQUEST_URI'] ?? '';
+$userRole   = authRole();
+$userName   = authName();
+$userEmail  = authEmail();
+$instId     = authInstId();
 
 // Fetch institution info for admin/staff
 $institution = null;
 if ($instId) {
-    $db  = getDB();
-    $stmt = $db->prepare("SELECT institution_name, logo, status FROM institutions WHERE id = ?");
+    $db   = getDB();
+    $stmt = $db->prepare(
+        "SELECT institution_name, logo, status, institution_type FROM institutions WHERE id = ?"
+    );
     $stmt->execute([$instId]);
     $institution = $stmt->fetch();
 }
 
-// Role-based nav menus
+// Determine active section from current URL for nav highlight
+$_up = parse_url($currentUrl, PHP_URL_PATH) ?? '';
+$currentSection = match(true) {
+    str_contains($_up, '/institution-admin/') && !str_contains($_up, '/dashboard') => 'institution',
+    str_contains($_up, '/members/')    => 'members',
+    str_contains($_up, '/accounts/')   => 'accounts',
+    str_contains($_up, '/services/')   => 'services',
+    str_contains($_up, '/reports/')    => 'reports',
+    str_contains($_up, '/settings/')   => 'settings',
+    str_contains($_up, '/super-admin/') && str_contains($_up, 'institutions') => 'institutions',
+    default => 'dashboard',
+};
+
+// Institution status shortcuts
+$instReady  = $institution && in_array($institution['status'], ['active', 'pending_approval']);
+$instActive = $institution && $institution['status'] === 'active';
+
+// Nav items: [label, href, section]
 $navItems = match($userRole) {
     'super_admin' => [
-        'Dashboard'    => BASE_URL . '/app/super-admin/dashboard.php',
-        'Institutions' => BASE_URL . '/app/super-admin/institutions.php',
+        ['Dashboard',    BASE_URL . '/app/super-admin/dashboard.php',    'dashboard'],
+        ['Institutions', BASE_URL . '/app/super-admin/institutions.php', 'institutions'],
     ],
-    'institution_admin' => array_filter([
-        'Dashboard'            => BASE_URL . '/app/institution-admin/dashboard.php',
-        'Institution Profile'  => BASE_URL . '/app/institution-admin/profile.php',
-        'Staff Management'     => ($institution && in_array($institution['status'], ['active','pending_approval']))
-                                   ? BASE_URL . '/app/institution-admin/staff.php'
-                                   : null,
-        'Members'              => ($institution && $institution['status'] === 'active')
-                                   ? BASE_URL . '/app/members/index.php'
-                                   : null,
-    ]),
-    'staff' => [
-        'Dashboard' => BASE_URL . '/app/staff/dashboard.php',
-        'Members'   => BASE_URL . '/app/members/index.php',
-    ],
+    'institution_admin' => array_values(array_filter([
+        ['Institution', BASE_URL . '/app/institution-admin/institution-menu.php', 'institution'],
+        $instReady  ? ['Members',  BASE_URL . '/app/members/menu.php',           'members']  : null,
+        $instActive ? ['Services', BASE_URL . '/app/services/index.php',          'services'] : null,
+        $instActive ? ['Accounts', BASE_URL . '/app/accounts/index.php',          'accounts'] : null,
+        $instActive ? ['Reports',  BASE_URL . '/app/reports/index.php',           'reports']  : null,
+        ['Settings',    BASE_URL . '/app/settings/index.php',                    'settings'],
+    ])),
+    'staff' => array_values(array_filter([
+        $instActive ? ['Members',  BASE_URL . '/app/members/menu.php',   'members']  : null,
+        $instActive ? ['Services', BASE_URL . '/app/services/index.php', 'services'] : null,
+        $instActive ? ['Accounts', BASE_URL . '/app/accounts/index.php', 'accounts'] : null,
+        $instActive ? ['Reports',  BASE_URL . '/app/reports/index.php',  'reports']  : null,
+    ])),
     default => [],
 };
 ?>
 <nav class="navbar navbar-expand-lg app-navbar sticky-top">
   <div class="container-xl">
 
-    <!-- Brand -->
+    <!-- Brand → Dashboard -->
     <a class="navbar-brand d-flex align-items-center gap-2" href="<?= h(dashboardUrl()) ?>">
       <?php if ($institution && $institution['logo']): ?>
         <img src="<?= h(LOGO_URL . '/' . $institution['logo']) ?>"
@@ -68,9 +87,8 @@ $navItems = match($userRole) {
     <!-- Nav Items -->
     <div class="collapse navbar-collapse" id="appNavbar">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <?php foreach ($navItems as $label => $href):
-            if (!$href) continue;
-            $active = (strpos($currentUrl, parse_url($href, PHP_URL_PATH)) !== false) ? ' active' : '';
+        <?php foreach ($navItems as [$label, $href, $section]):
+            $active = ($currentSection === $section) ? ' active' : '';
         ?>
         <li class="nav-item">
           <a class="nav-link<?= $active ?>" href="<?= h($href) ?>"><?= h($label) ?></a>
@@ -78,9 +96,8 @@ $navItems = match($userRole) {
         <?php endforeach; ?>
       </ul>
 
-      <!-- Right: Role badge + Avatar -->
+      <!-- Right: Role badge + Avatar dropdown -->
       <div class="d-flex align-items-center gap-3 mb-2 mb-lg-0">
-        <!-- Role badge -->
         <span class="nav-role-badge <?= $userRole ?>">
           <?= match($userRole) {
             'super_admin'       => '<i class="bi bi-shield-fill-check me-1"></i>Super Admin',
@@ -90,7 +107,6 @@ $navItems = match($userRole) {
           } ?>
         </span>
 
-        <!-- Avatar dropdown -->
         <div class="dropdown">
           <button class="nav-avatar-btn dropdown-toggle d-flex align-items-center gap-2"
                   type="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -119,6 +135,6 @@ $navItems = match($userRole) {
           </ul>
         </div>
       </div>
-    </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-xl -->
+    </div>
+  </div>
 </nav>
