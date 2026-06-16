@@ -144,7 +144,8 @@ require_once APP_ROOT . '/includes/header.php';
               <?php
               $types = ['academy'=>'Sports Academy','club'=>'Sports Club','stadium'=>'Stadium','complex'=>'Sports Complex',
                         'gym'=>'Gym / Fitness Centre','turf'=>'Turf / Ground','swimming_pool'=>'Swimming Pool',
-                        'training_centre'=>'Training Centre','association'=>'Sports Association','other'=>'Other'];
+                        'training_centre'=>'Training Centre','association'=>'Sports Association',
+                        'school'=>'School / Educational Institution','other'=>'Other'];
               foreach ($types as $val => $label): ?>
               <option value="<?= h($val) ?>" <?= $inst['institution_type'] === $val ? 'selected' : '' ?>>
                 <?= h($label) ?>

@@ -438,6 +438,7 @@ function institutionTypeLabel(string $type): string
         'swimming_pool'  => 'Swimming Pool',
         'training_centre'=> 'Training Centre',
         'association'    => 'Sports Association',
+        'school'         => 'School / Educational Institution',
         'other'          => 'Other',
     ];
     return $labels[$type] ?? ucfirst(str_replace('_', ' ', $type));
