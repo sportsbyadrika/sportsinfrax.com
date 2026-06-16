@@ -68,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  VALUES (?,?,?,?,?,?,?,?,?)"
             )->execute([$membershipId, $payDate, $amount, $mode, $ref ?: null, $receipt ?: null,
                         $proofName, $remarks ?: null, authId()]);
+            $newPaymentId = (int)$db->lastInsertId();
 
             // Update payment status
             $newPaid = $totalPaid + $amount;
@@ -78,7 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("UPDATE memberships SET payment_status = ?, updated_at = NOW() WHERE id = ?")
                ->execute([$status, $membershipId]);
 
-            setFlash('success', 'Payment of ₹' . number_format($amount, 2) . ' recorded successfully.');
+            // Staff-recorded payments require institution_admin approval
+            if (authRole() === 'staff') {
+                createApprovalRequest('membership_payment', $newPaymentId, $instId, authId());
+                setFlash('success', 'Payment of ₹' . number_format($amount, 2) . ' recorded and submitted for approval.');
+            } else {
+                setFlash('success', 'Payment of ₹' . number_format($amount, 2) . ' recorded successfully.');
+            }
             header('Location: ' . BASE_URL . '/app/members/payment-add?membership_id=' . $membershipId . '&member_id=' . $memberId);
             exit;
         }
