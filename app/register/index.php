@@ -1,7 +1,11 @@
 <?php
 require_once dirname(__DIR__) . '/bootstrap.php';
 
-if (isLoggedIn()) { header('Location: ' . dashboardUrl()); exit; }
+// Super admin can access the registration form to register on behalf of an institution.
+// All other logged-in users are redirected to their dashboard.
+if (isLoggedIn() && authRole() !== 'super_admin') {
+    header('Location: ' . dashboardUrl()); exit;
+}
 
 $db    = getDB();
 $step  = $_GET['step'] ?? 'form';   // 'form' | 'verify' | 'done'

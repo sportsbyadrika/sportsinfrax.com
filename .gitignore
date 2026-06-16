@@ -1,0 +1,14 @@
+# Local config files with real credentials – never commit these
+app/config/db.local.php
+
+# Uploaded files
+app/uploads/logos/*
+app/uploads/photos/*
+app/uploads/payments/*
+app/uploads/documents/*
+
+# Keep the upload directories but not their contents
+!app/uploads/logos/.gitkeep
+!app/uploads/photos/.gitkeep
+!app/uploads/payments/.gitkeep
+!app/uploads/documents/.gitkeep

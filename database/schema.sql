@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `institutions` (
   `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `registration_id`  INT UNSIGNED NULL DEFAULT NULL,
   `institution_name` VARCHAR(255) NOT NULL,
-  `institution_type` ENUM('academy','club','stadium','complex','gym','turf','swimming_pool','training_centre','association','other') NOT NULL DEFAULT 'academy',
+  `institution_type` VARCHAR(50) NOT NULL DEFAULT 'academy',
   `logo`             VARCHAR(500) NULL DEFAULT NULL,
   `reg_number`       VARCHAR(100) NULL DEFAULT NULL,
   `reg_document`     VARCHAR(500) NULL DEFAULT NULL,
@@ -210,6 +210,20 @@ CREATE TABLE IF NOT EXISTS `membership_payments` (
   CONSTRAINT `fk_mp_membership_id` FOREIGN KEY (`membership_id`) REFERENCES `memberships`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- -------------------------------------------------------
+-- institution_types
+-- Master list of institution types (add rows to extend)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `institution_types` (
+  `id`         INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `value`      VARCHAR(50)   NOT NULL,
+  `label`      VARCHAR(100)  NOT NULL,
+  `sort_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `is_active`  TINYINT(1)    NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_inst_type_value` (`value`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- -------------------------------------------------------
@@ -227,3 +241,20 @@ VALUES (
   1
 )
 ON DUPLICATE KEY UPDATE `updated_at` = CURRENT_TIMESTAMP;
+
+-- -------------------------------------------------------
+-- Seed: Institution Types
+-- -------------------------------------------------------
+INSERT INTO `institution_types` (`value`, `label`, `sort_order`) VALUES
+  ('academy',          'Sports Academy',                    1),
+  ('club',             'Sports Club',                       2),
+  ('association',      'Sports Association',                3),
+  ('school',           'School / Educational Institution',  4),
+  ('training_centre',  'Training Centre',                   5),
+  ('complex',          'Sports Complex',                    6),
+  ('stadium',          'Stadium',                           7),
+  ('gym',              'Gym / Fitness Centre',              8),
+  ('swimming_pool',    'Swimming Pool',                     9),
+  ('turf',             'Turf / Ground',                    10),
+  ('other',            'Other',                            99)
+ON DUPLICATE KEY UPDATE `label` = VALUES(`label`), `sort_order` = VALUES(`sort_order`);
