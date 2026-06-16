@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `institutions` (
   `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `registration_id`  INT UNSIGNED NULL DEFAULT NULL,
   `institution_name` VARCHAR(255) NOT NULL,
-  `institution_type` ENUM('academy','club','stadium','complex','gym','turf','swimming_pool','training_centre','association','school','other') NOT NULL DEFAULT 'academy',
+  `institution_type` VARCHAR(50) NOT NULL DEFAULT 'academy',
   `logo`             VARCHAR(500) NULL DEFAULT NULL,
   `reg_number`       VARCHAR(100) NULL DEFAULT NULL,
   `reg_document`     VARCHAR(500) NULL DEFAULT NULL,
