@@ -88,3 +88,35 @@ function logoutUser(): void
     }
     session_destroy();
 }
+
+// ── Permission Gate ────────────────────────────────────────
+
+/**
+ * Returns true if the logged-in user may perform module+action (optionally scoped).
+ * super_admin and institution_admin always return true.
+ * Staff are checked against staff_permissions via hasStaffPermission().
+ */
+function canDo(string $module, string $action, string $scope = 'all'): bool
+{
+    $role = authRole();
+    if ($role === 'super_admin' || $role === 'institution_admin') return true;
+    if ($role !== 'staff') return false;
+    $userId = authId();
+    $instId = authInstId();
+    if (!$userId || !$instId) return false;
+    return hasStaffPermission($userId, $instId, $module . '.' . $action, $scope);
+}
+
+/**
+ * Gate — redirects to dashboard with error flash if the current user
+ * cannot perform the given module+action (optionally scoped).
+ */
+function requirePermission(string $module, string $action, string $scope = 'all'): void
+{
+    requireLogin();
+    if (!canDo($module, $action, $scope)) {
+        setFlash('error', 'You do not have permission to perform this action.');
+        header('Location: ' . dashboardUrl());
+        exit;
+    }
+}

@@ -34,11 +34,14 @@ define('LOGO_URL',     BASE_URL . '/app/uploads/logos');
 define('PHOTO_URL',    BASE_URL . '/app/uploads/photos');
 define('PAYMENT_URL',  BASE_URL . '/app/uploads/payments');
 define('DOC_URL',      BASE_URL . '/app/uploads/documents');
+define('ATTACH_URL',   BASE_URL . '/app/serve/file');
 
 // ── Upload Limits & Allowed Types ─────────────────────────
 define('MAX_FILE_SIZE',   5 * 1024 * 1024); // 5 MB
 define('ALLOWED_IMAGES',  ['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
-define('ALLOWED_DOCS',    ['application/pdf', 'image/jpeg', 'image/png']);
+define('ALLOWED_WORD',    ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword']);
+define('ALLOWED_EXCEL',   ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel']);
+define('ALLOWED_DOCS',    array_merge(['application/pdf', 'image/jpeg', 'image/png', 'image/webp'], ALLOWED_WORD, ALLOWED_EXCEL));
 
 // ── Session ────────────────────────────────────────────────
 define('SESSION_LIFETIME', 7200); // 2 hours
@@ -58,6 +61,12 @@ define('SMTP_PORT',   (int)(getenv('SMTP_PORT')   ?: 587));
 define('SMTP_USER',   getenv('SMTP_USER')   ?: '');          // e.g. noreply@sportsinfrax.com
 define('SMTP_PASS',   getenv('SMTP_PASS')   ?: '');
 define('SMTP_SECURE', getenv('SMTP_SECURE') ?: 'tls');       // 'tls' | 'ssl' | ''
+
+// ── Audit: fields tracked for change log ──────────────────
+define('AUDIT_TRACKED_FIELDS', [
+    'member' => ['mobile', 'email', 'id_number', 'id_type', 'is_active', 'emergency_contact_mobile'],
+    'staff'  => ['is_active', 'staff_type', 'sch_role_id'],
+]);
 
 // ── Timezone ───────────────────────────────────────────────
 date_default_timezone_set('Asia/Kolkata');

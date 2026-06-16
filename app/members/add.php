@@ -28,9 +28,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (!preg_match('/^[6-9]\d{9}$/', $mobile)) $error = 'Valid 10-digit mobile is required.';
 
     if (!$error) {
-        // Handle photo upload
-        $photoName = null;
-        if (!empty($_FILES['passport_photo']['name'])) {
+        // Handle photo: prefer cropped base64 data over raw file upload
+        $photoName   = null;
+        $croppedData = $_POST['cropped_photo_data'] ?? '';
+        if ($croppedData !== '' && str_starts_with($croppedData, 'data:image/')) {
+            try {
+                $photoName = saveCroppedPhoto($croppedData, PHOTO_DIR);
+            } catch (RuntimeException $e) {
+                $error = 'Photo save failed: ' . $e->getMessage();
+            }
+        } elseif (!empty($_FILES['passport_photo']['name'])) {
             try {
                 $photoName = uploadFile($_FILES['passport_photo'], PHOTO_DIR, ALLOWED_IMAGES);
             } catch (RuntimeException $e) {
@@ -84,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$useCropper  = true;
 $pageTitle   = 'Add New Member';
 $breadcrumbs = [
     'Dashboard' => dashboardUrl(),
@@ -272,19 +280,16 @@ require_once APP_ROOT . '/includes/header.php';
       <div class="card-header"><i class="bi bi-person-bounding-box me-2 text-primary"></i>Passport Photo</div>
       <div class="card-body text-center">
         <div class="mb-3">
-          <img src="<?= h(BASE_URL) ?>/app/assets/img/photo-placeholder.svg"
-               id="photoPreview"
-               class="member-photo"
-               alt="Photo Preview"
-               onerror="this.style.display='none';document.getElementById('photoPlaceholder').style.display='flex';">
-          <div id="photoPlaceholder" class="member-photo-placeholder mx-auto" style="display:none;">
+          <img id="photoPreview" src="" alt="Photo Preview"
+               class="member-photo mx-auto d-block" style="display:none;">
+          <div id="photoPlaceholder" class="member-photo-placeholder mx-auto" style="display:flex;">
             <i class="bi bi-person-fill"></i>
           </div>
         </div>
-        <label class="form-label">Upload Photo</label>
+        <label class="form-label small">Upload Photo</label>
         <input type="file" class="form-control form-control-sm" name="passport_photo"
-               accept="image/*" data-preview="#photoPreview" id="photoInput">
-        <div class="form-text">Passport size. JPG/PNG. Max 5 MB.</div>
+               accept="image/jpeg,image/png,image/webp" id="photoInput">
+        <div class="form-text">JPG / PNG / WebP &middot; Max 5 MB &middot; Will be cropped to passport size.</div>
       </div>
     </div>
 
@@ -305,26 +310,7 @@ require_once APP_ROOT . '/includes/header.php';
   </div>
 
 </div>
+<?php require_once APP_ROOT . '/includes/photo_cropper.php'; ?>
 </form>
-
-<script>
-// Immediately show placeholder on page load if no preview image URL
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('photoPlaceholder').style.display = 'flex';
-  document.getElementById('photoPreview').style.display = 'none';
-});
-document.getElementById('photoInput').addEventListener('change', function () {
-  if (this.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const preview = document.getElementById('photoPreview');
-      preview.src = e.target.result;
-      preview.style.display = 'block';
-      document.getElementById('photoPlaceholder').style.display = 'none';
-    };
-    reader.readAsDataURL(this.files[0]);
-  }
-});
-</script>
 
 <?php require_once APP_ROOT . '/includes/footer.php'; ?>

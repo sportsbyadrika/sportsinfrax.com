@@ -25,8 +25,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif (!preg_match('/^[6-9]\d{9}$/', $mobile)) $error = 'Valid 10-digit mobile is required.';
 
     if (!$error) {
-        $photoName = $member['passport_photo'];
-        if (!empty($_FILES['passport_photo']['name'])) {
+        // Handle photo: prefer cropped base64 data over raw file upload
+        $photoName   = $member['passport_photo'];
+        $croppedData = $_POST['cropped_photo_data'] ?? '';
+        if ($croppedData !== '' && str_starts_with($croppedData, 'data:image/')) {
+            try {
+                if ($photoName && file_exists(PHOTO_DIR . '/' . $photoName)) {
+                    @unlink(PHOTO_DIR . '/' . $photoName);
+                }
+                $photoName = saveCroppedPhoto($croppedData, PHOTO_DIR);
+            } catch (RuntimeException $e) {
+                $error = 'Photo save failed: ' . $e->getMessage();
+            }
+        } elseif (!empty($_FILES['passport_photo']['name'])) {
             try {
                 $newPhoto = uploadFile($_FILES['passport_photo'], PHOTO_DIR, ALLOWED_IMAGES);
                 if ($photoName && file_exists(PHOTO_DIR . '/' . $photoName)) {
@@ -39,6 +50,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$error) {
+            // Build new values for audit log comparison (before DB write)
+            $newData = [
+                'mobile'                   => $mobile,
+                'email'                    => trim($_POST['email'] ?? '') ?: null,
+                'id_number'                => trim($_POST['id_number'] ?? '') ?: null,
+                'id_type'                  => $_POST['id_type'] ?: null,
+                'is_active'                => $member['is_active'],
+                'emergency_contact_mobile' => trim($_POST['emergency_contact_mobile'] ?? '') ?: null,
+            ];
+
             $db->prepare(
                 "UPDATE members SET
                    first_name=?, last_name=?, date_of_birth=?, gender=?, blood_group=?,
@@ -55,17 +76,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_POST['gender']                        ?: null,
                 $_POST['blood_group']                   ?: null,
                 trim($_POST['nationality']              ?? 'Indian'),
-                trim($_POST['email']                    ?? '') ?: null,
+                $newData['email'],
                 $mobile,
                 trim($_POST['alternate_mobile']         ?? '') ?: null,
                 trim($_POST['address']                  ?? '') ?: null,
                 trim($_POST['city']                     ?? '') ?: null,
                 trim($_POST['state']                    ?? '') ?: null,
                 trim($_POST['pincode']                  ?? '') ?: null,
-                $_POST['id_type']                       ?: null,
-                trim($_POST['id_number']                ?? '') ?: null,
+                $newData['id_type'],
+                $newData['id_number'],
                 trim($_POST['emergency_contact_name']   ?? '') ?: null,
-                trim($_POST['emergency_contact_mobile'] ?? '') ?: null,
+                $newData['emergency_contact_mobile'],
                 trim($_POST['emergency_contact_relation']??'') ?: null,
                 trim($_POST['medical_conditions']       ?? '') ?: null,
                 $photoName,
@@ -74,6 +95,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id,
                 $instId,
             ]);
+
+            logFieldChanges('member', $id, $instId, $member, $newData);
+
             setFlash('success', 'Member updated successfully.');
             header('Location: ' . BASE_URL . '/app/members/view?id=' . $id);
             exit;
@@ -81,7 +105,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$m           = $member; // alias for form
+$m           = $member;
+$useCropper  = true;
 $pageTitle   = 'Edit Member – ' . h($member['first_name'] . ' ' . $member['last_name']);
 $breadcrumbs = [
     'Dashboard' => dashboardUrl(),
@@ -205,21 +230,24 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="card mb-4 position-sticky" style="top:80px;">
       <div class="card-header"><i class="bi bi-person-bounding-box me-2 text-primary"></i>Passport Photo</div>
       <div class="card-body text-center">
-        <?php if ($m['passport_photo']): ?>
-        <img src="<?= h(PHOTO_URL . '/' . $m['passport_photo']) ?>"
-             id="photoPreview" class="member-photo mx-auto d-block mb-3"
-             style="width:100px;height:120px;" alt="Photo">
-        <?php else: ?>
-        <div class="member-photo-placeholder mx-auto mb-3" id="photoPlaceholder"
-             style="width:100px;height:120px;font-size:3rem;display:flex;">
-          <i class="bi bi-person-fill"></i>
+        <div class="mb-3">
+          <?php if ($m['passport_photo']): ?>
+          <img src="<?= h(PHOTO_URL . '/' . $m['passport_photo']) ?>"
+               id="photoPreview" class="member-photo mx-auto d-block" alt="Photo">
+          <div id="photoPlaceholder" class="member-photo-placeholder mx-auto" style="display:none;">
+            <i class="bi bi-person-fill"></i>
+          </div>
+          <?php else: ?>
+          <img id="photoPreview" src="" alt="Photo" class="member-photo mx-auto d-block" style="display:none;">
+          <div id="photoPlaceholder" class="member-photo-placeholder mx-auto" style="display:flex;">
+            <i class="bi bi-person-fill"></i>
+          </div>
+          <?php endif; ?>
         </div>
-        <img id="photoPreview" class="member-photo mx-auto d-block mb-3"
-             style="width:100px;height:120px;display:none;" alt="Photo">
-        <?php endif; ?>
+        <label class="form-label small">Replace Photo</label>
         <input type="file" class="form-control form-control-sm" name="passport_photo"
-               accept="image/*" id="photoInput">
-        <div class="form-text">Replace photo. JPG/PNG. Max 5 MB.</div>
+               accept="image/jpeg,image/png,image/webp" id="photoInput">
+        <div class="form-text">JPG / PNG / WebP &middot; Max 5 MB &middot; Will be cropped to passport size.</div>
       </div>
       <div class="card-footer">
         <div class="d-grid gap-2">
@@ -230,21 +258,7 @@ require_once APP_ROOT . '/includes/header.php';
     </div>
   </div>
 </div>
+<?php require_once APP_ROOT . '/includes/photo_cropper.php'; ?>
 </form>
-
-<script>
-document.getElementById('photoInput').addEventListener('change', function () {
-  if (this.files[0]) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const pr = document.getElementById('photoPreview');
-      const ph = document.getElementById('photoPlaceholder');
-      if (pr) { pr.src = e.target.result; pr.style.display = 'block'; }
-      if (ph) ph.style.display = 'none';
-    };
-    reader.readAsDataURL(this.files[0]);
-  }
-});
-</script>
 
 <?php require_once APP_ROOT . '/includes/footer.php'; ?>

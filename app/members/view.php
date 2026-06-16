@@ -97,7 +97,7 @@ require_once APP_ROOT . '/includes/header.php';
         <?php endif; ?>
         <?php if ($member['id_type']): ?>
         <div class="d-flex justify-content-between mb-2"><span class="text-muted">ID Type</span><span><?= h(ucfirst(str_replace('_',' ',$member['id_type']))) ?></span></div>
-        <div class="d-flex justify-content-between mb-2"><span class="text-muted">ID Number</span><span><?= h($member['id_number'] ?? '—') ?></span></div>
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">ID Number</span><span class="font-monospace"><?= h(maskIdNumber($member['id_number'] ?? null)) ?></span></div>
         <?php endif; ?>
         <?php if ($member['address']): ?>
         <div class="pt-2 border-top">

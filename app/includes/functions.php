@@ -161,6 +161,184 @@ function uploadFile(array $file, string $destDir, array $allowedMime = []): stri
     return $safeName;
 }
 
+// ── Passport Photo (Cropper) ───────────────────────────────
+
+/**
+ * Decode a base64 data URI image, resize it to 413×531 px via GD, and
+ * save as JPEG to $destDir. Returns the stored filename (basename only).
+ */
+function saveCroppedPhoto(string $dataUri, string $destDir): string
+{
+    if (!preg_match('#^data:image/(jpeg|png|webp|gif);base64,(.+)$#s', $dataUri, $m)) {
+        throw new RuntimeException('Invalid image data URI.');
+    }
+    $imageData = base64_decode($m[2]);
+    if ($imageData === false || strlen($imageData) === 0) {
+        throw new RuntimeException('Failed to decode image data.');
+    }
+    if (strlen($imageData) > MAX_FILE_SIZE) {
+        throw new RuntimeException('Cropped image exceeds 5 MB limit.');
+    }
+
+    $src = @imagecreatefromstring($imageData);
+    if (!$src) throw new RuntimeException('Cannot process image data.');
+
+    $dst = imagecreatetruecolor(413, 531);
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, 413, 531, imagesx($src), imagesy($src));
+    imagedestroy($src);
+
+    if (!is_dir($destDir) && !mkdir($destDir, 0755, true)) {
+        imagedestroy($dst);
+        throw new RuntimeException('Could not create photo directory.');
+    }
+
+    $fileName = bin2hex(random_bytes(16)) . '.jpg';
+    if (!imagejpeg($dst, $destDir . '/' . $fileName, 92)) {
+        imagedestroy($dst);
+        throw new RuntimeException('Failed to save cropped photo.');
+    }
+    imagedestroy($dst);
+    return $fileName;
+}
+
+// ── Attachment Store ───────────────────────────────────────
+
+/**
+ * Validate, move, and record a file upload in the attachments table.
+ * Returns the new attachment row ID.
+ */
+function uploadAttachment(
+    array $file,
+    string $entityType,
+    int $entityId,
+    string $fileCategory,
+    ?int $instId,
+    bool $isSensitive = false
+): int {
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Upload error code ' . $file['error'] . '.');
+    }
+    if ($file['size'] > MAX_FILE_SIZE) {
+        throw new RuntimeException('File size exceeds 5 MB limit.');
+    }
+
+    $allowedMime = in_array($fileCategory, ['photo', 'logo'], true) ? ALLOWED_IMAGES : ALLOWED_DOCS;
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime  = $finfo->file($file['tmp_name']);
+    if (!in_array($mime, $allowedMime, true)) {
+        throw new RuntimeException('Invalid file type.');
+    }
+
+    $ext        = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'bin';
+    $storedName = bin2hex(random_bytes(16)) . '.' . $ext;
+    $subPath    = 'attachments/' . $fileCategory;
+    $destDir    = UPLOAD_ROOT . '/' . $subPath;
+
+    if (!is_dir($destDir) && !mkdir($destDir, 0755, true)) {
+        throw new RuntimeException('Could not create upload directory.');
+    }
+    if (!move_uploaded_file($file['tmp_name'], $destDir . '/' . $storedName)) {
+        throw new RuntimeException('Failed to move uploaded file.');
+    }
+
+    $db = getDB();
+    $db->prepare(
+        "INSERT INTO attachments
+         (entity_type, entity_id, institution_id, file_category, original_name,
+          stored_name, storage_path, mime_type, file_size, is_sensitive, uploaded_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([
+        $entityType,
+        $entityId,
+        $instId,
+        $fileCategory,
+        $file['name'],
+        $storedName,
+        $subPath . '/' . $storedName,
+        $mime,
+        $file['size'],
+        $isSensitive ? 1 : 0,
+        isLoggedIn() ? authId() : null,
+    ]);
+
+    return (int)$db->lastInsertId();
+}
+
+// ── ID Masking ─────────────────────────────────────────────
+
+/**
+ * Mask an identity number for display: keep last 4 characters visible,
+ * replace the rest with X. Aadhaar (12 numeric digits) formats as XXXX-XXXX-1234.
+ */
+function maskIdNumber(?string $value): string
+{
+    if ($value === null || $value === '') return '—';
+    $clean = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $value));
+    $len   = strlen($clean);
+    if ($len <= 4) return $value;
+    // Aadhaar: exactly 12 numeric digits
+    if ($len === 12 && ctype_digit($clean)) {
+        return 'XXXX-XXXX-' . substr($clean, -4);
+    }
+    return str_repeat('X', $len - 4) . substr($clean, -4);
+}
+
+/**
+ * Returns the value to write to field_change_log — masking sensitive fields.
+ */
+function maskFieldForLog(string $fieldName, ?string $value): ?string
+{
+    if ($value === null) return null;
+    if ($fieldName === 'id_number') return maskIdNumber($value);
+    return $value;
+}
+
+// ── Audit Field Change Log ─────────────────────────────────
+
+/**
+ * Compare $oldData and $newData row arrays; for every tracked field that
+ * changed, write one row to field_change_log with masked sensitive values.
+ */
+function logFieldChanges(
+    string $entityType,
+    int $entityId,
+    ?int $instId,
+    array $oldData,
+    array $newData
+): void {
+    $tracked = AUDIT_TRACKED_FIELDS[$entityType] ?? [];
+    if (!$tracked) return;
+
+    $db        = getDB();
+    $changedBy = isLoggedIn() ? authId() : null;
+    $ip        = $_SERVER['REMOTE_ADDR'] ?? null;
+
+    $stmt = $db->prepare(
+        "INSERT INTO field_change_log
+         (entity_type, entity_id, institution_id, changed_by, field_name, old_value, new_value, ip_address)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+
+    foreach ($tracked as $field) {
+        $oldVal = isset($oldData[$field]) ? (string)$oldData[$field] : null;
+        $newVal = isset($newData[$field]) ? (string)$newData[$field] : null;
+        // Normalise empty string to null for comparison
+        if ($oldVal === '') $oldVal = null;
+        if ($newVal === '') $newVal = null;
+        if ($oldVal === $newVal) continue;
+        $stmt->execute([
+            $entityType,
+            $entityId,
+            $instId,
+            $changedBy,
+            $field,
+            maskFieldForLog($field, $oldVal),
+            maskFieldForLog($field, $newVal),
+            $ip,
+        ]);
+    }
+}
+
 // ── Date Formatting ────────────────────────────────────────
 function fmtDate(?string $date, string $format = 'd M Y'): string
 {
@@ -514,10 +692,14 @@ function _staffPermSet(int $userId, int $instId): array
     if (!isset($cache[$key])) {
         try {
             $stmt = getDB()->prepare(
-                "SELECT permission_key FROM staff_permissions WHERE user_id = ? AND institution_id = ?"
+                "SELECT module, action, scope FROM staff_permissions WHERE user_id = ? AND institution_id = ?"
             );
             $stmt->execute([$userId, $instId]);
-            $cache[$key] = array_flip(array_column($stmt->fetchAll(), 'permission_key'));
+            $perms = [];
+            foreach ($stmt->fetchAll() as $row) {
+                $perms[$row['module'] . '.' . $row['action']][] = $row['scope'];
+            }
+            $cache[$key] = $perms;
         } catch (Exception $e) {
             $cache[$key] = [];
         }
@@ -525,9 +707,18 @@ function _staffPermSet(int $userId, int $instId): array
     return $cache[$key];
 }
 
-function hasStaffPermission(int $userId, int $instId, string $permissionKey): bool
+/**
+ * Check if a staff user has a specific module.action permission.
+ * When $scope is 'all', the user must have the 'all' scope explicitly.
+ * For any other scope, having 'all' also satisfies the check.
+ */
+function hasStaffPermission(int $userId, int $instId, string $moduleAction, string $scope = 'all'): bool
 {
-    return isset(_staffPermSet($userId, $instId)[$permissionKey]);
+    $perms = _staffPermSet($userId, $instId);
+    if (!isset($perms[$moduleAction])) return false;
+    $granted = $perms[$moduleAction];
+    if ($scope === 'all') return in_array('all', $granted, true);
+    return in_array('all', $granted, true) || in_array($scope, $granted, true);
 }
 
 /**
