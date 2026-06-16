@@ -2,5 +2,9 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/shooting/public_html/app.sportsinfrax.com/
-    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/mkdir -p $DEPLOYPATH/app/config
     - /bin/cp -R . $DEPLOYPATH
+    # Auto-create local credential files on first deploy only (never overwrites).
+    # After first deploy, edit these files on the server with real credentials.
+    - test -f $DEPLOYPATH/app/config/db.local.php   || /bin/cp $DEPLOYPATH/app/config/db.local.example.php   $DEPLOYPATH/app/config/db.local.php
+    - test -f $DEPLOYPATH/app/config/mail.local.php  || /bin/cp $DEPLOYPATH/app/config/mail.local.example.php  $DEPLOYPATH/app/config/mail.local.php
