@@ -218,10 +218,13 @@ CREATE TABLE IF NOT EXISTS `institution_types` (
   `id`         INT UNSIGNED  NOT NULL AUTO_INCREMENT,
   `value`      VARCHAR(50)   NOT NULL,
   `label`      VARCHAR(100)  NOT NULL,
+  `category`   VARCHAR(50)   NOT NULL DEFAULT 'general'
+                             COMMENT 'association | school | sports_club | general',
   `sort_order` TINYINT UNSIGNED NOT NULL DEFAULT 0,
   `is_active`  TINYINT(1)    NOT NULL DEFAULT 1,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_inst_type_value` (`value`)
+  UNIQUE KEY `uq_inst_type_value` (`value`),
+  KEY `idx_inst_type_category` (`category`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
@@ -245,16 +248,21 @@ ON DUPLICATE KEY UPDATE `updated_at` = CURRENT_TIMESTAMP;
 -- -------------------------------------------------------
 -- Seed: Institution Types
 -- -------------------------------------------------------
-INSERT INTO `institution_types` (`value`, `label`, `sort_order`) VALUES
-  ('academy',          'Sports Academy',                    1),
-  ('club',             'Sports Club',                       2),
-  ('association',      'Sports Association',                3),
-  ('school',           'School / Educational Institution',  4),
-  ('training_centre',  'Training Centre',                   5),
-  ('complex',          'Sports Complex',                    6),
-  ('stadium',          'Stadium',                           7),
-  ('gym',              'Gym / Fitness Centre',              8),
-  ('swimming_pool',    'Swimming Pool',                     9),
-  ('turf',             'Turf / Ground',                    10),
-  ('other',            'Other',                            99)
-ON DUPLICATE KEY UPDATE `label` = VALUES(`label`), `sort_order` = VALUES(`sort_order`);
+-- category: 'association' | 'school' | 'sports_club' | 'general'
+-- Each category gets its own application flow, masters, and UI for institution admin & staff.
+INSERT INTO `institution_types` (`value`, `label`, `category`, `sort_order`) VALUES
+  ('academy',          'Sports Academy',                   'sports_club',  1),
+  ('club',             'Sports Club',                      'sports_club',  2),
+  ('association',      'Sports Association',               'association',  3),
+  ('school',           'School / Educational Institution', 'school',       4),
+  ('training_centre',  'Training Centre',                  'sports_club',  5),
+  ('complex',          'Sports Complex',                   'sports_club',  6),
+  ('stadium',          'Stadium',                          'sports_club',  7),
+  ('gym',              'Gym / Fitness Centre',             'sports_club',  8),
+  ('swimming_pool',    'Swimming Pool',                    'sports_club',  9),
+  ('turf',             'Turf / Ground',                    'sports_club', 10),
+  ('other',            'Other',                            'general',     99)
+ON DUPLICATE KEY UPDATE
+  `label`      = VALUES(`label`),
+  `category`   = VALUES(`category`),
+  `sort_order` = VALUES(`sort_order`);
