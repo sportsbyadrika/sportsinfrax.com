@@ -3,6 +3,11 @@
  * SportsInfraX – Database Connection (PDO Singleton)
  */
 
+// Load local credentials if the file exists (not committed to git)
+$_localDb = __DIR__ . '/db.local.php';
+if (file_exists($_localDb)) { require_once $_localDb; }
+unset($_localDb);
+
 define('DB_HOST',    getenv('DB_HOST')    ?: '127.0.0.1');
 define('DB_PORT',    getenv('DB_PORT')    ?: '3306');
 define('DB_NAME',    getenv('DB_NAME')    ?: 'sportsinfrax');
