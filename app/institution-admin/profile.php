@@ -141,12 +141,8 @@ require_once APP_ROOT . '/includes/header.php';
           <div class="col-md-4">
             <label class="form-label">Institution Type <span class="required">*</span></label>
             <select class="form-select" name="institution_type" required>
-              <?php
-              $types = ['academy'=>'Sports Academy','club'=>'Sports Club','stadium'=>'Stadium','complex'=>'Sports Complex',
-                        'gym'=>'Gym / Fitness Centre','turf'=>'Turf / Ground','swimming_pool'=>'Swimming Pool',
-                        'training_centre'=>'Training Centre','association'=>'Sports Association',
-                        'school'=>'School / Educational Institution','other'=>'Other'];
-              foreach ($types as $val => $label): ?>
+              <option value="">— Select Type —</option>
+              <?php foreach (getInstitutionTypes() as $val => $label): ?>
               <option value="<?= h($val) ?>" <?= $inst['institution_type'] === $val ? 'selected' : '' ?>>
                 <?= h($label) ?>
               </option>

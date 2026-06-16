@@ -426,22 +426,26 @@ HTML;
 }
 
 // ── Institution Type Labels ────────────────────────────────
+function getInstitutionTypes(): array
+{
+    static $types = null;
+    if ($types === null) {
+        try {
+            $rows  = getDB()->query(
+                "SELECT value, label FROM institution_types WHERE is_active = 1 ORDER BY sort_order, label"
+            )->fetchAll();
+            $types = array_column($rows, 'label', 'value');
+        } catch (Exception $e) {
+            $types = [];
+        }
+    }
+    return $types;
+}
+
 function institutionTypeLabel(string $type): string
 {
-    $labels = [
-        'academy'        => 'Sports Academy',
-        'club'           => 'Sports Club',
-        'stadium'        => 'Stadium',
-        'complex'        => 'Sports Complex',
-        'gym'            => 'Gym / Fitness Centre',
-        'turf'           => 'Turf / Ground',
-        'swimming_pool'  => 'Swimming Pool',
-        'training_centre'=> 'Training Centre',
-        'association'    => 'Sports Association',
-        'school'         => 'School / Educational Institution',
-        'other'          => 'Other',
-    ];
-    return $labels[$type] ?? ucfirst(str_replace('_', ' ', $type));
+    $types = getInstitutionTypes();
+    return $types[$type] ?? ucwords(str_replace('_', ' ', $type));
 }
 
 function institutionStatusBadge(string $status): string
