@@ -425,27 +425,44 @@ HTML;
     return sendMail($to, $subject, $body);
 }
 
-// ── Institution Type Labels ────────────────────────────────
-function getInstitutionTypes(): array
+// ── Institution Type Helpers ───────────────────────────────
+// Returns all active types as full row arrays keyed by value.
+// Cached per request via static variable.
+function _institutionTypeRows(): array
 {
-    static $types = null;
-    if ($types === null) {
+    static $rows = null;
+    if ($rows === null) {
         try {
-            $rows  = getDB()->query(
-                "SELECT value, label FROM institution_types WHERE is_active = 1 ORDER BY sort_order, label"
+            $data = getDB()->query(
+                "SELECT value, label, category FROM institution_types
+                  WHERE is_active = 1 ORDER BY sort_order, label"
             )->fetchAll();
-            $types = array_column($rows, 'label', 'value');
+            $rows = array_column($data, null, 'value');
         } catch (Exception $e) {
-            $types = [];
+            $rows = [];
         }
     }
-    return $types;
+    return $rows;
+}
+
+// Returns [value => label] map for use in dropdowns.
+function getInstitutionTypes(): array
+{
+    return array_map(fn($r) => $r['label'], _institutionTypeRows());
+}
+
+// Returns the category ('association'|'school'|'sports_club'|'general')
+// for a given institution type value.
+function getInstitutionCategory(string $type): string
+{
+    $rows = _institutionTypeRows();
+    return $rows[$type]['category'] ?? 'general';
 }
 
 function institutionTypeLabel(string $type): string
 {
-    $types = getInstitutionTypes();
-    return $types[$type] ?? ucwords(str_replace('_', ' ', $type));
+    $rows = _institutionTypeRows();
+    return $rows[$type]['label'] ?? ucwords(str_replace('_', ' ', $type));
 }
 
 function institutionStatusBadge(string $status): string

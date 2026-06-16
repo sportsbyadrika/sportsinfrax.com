@@ -1,5 +1,6 @@
 # Local config files with real credentials – never commit these
 app/config/db.local.php
+app/config/mail.local.php
 
 # Uploaded files
 app/uploads/logos/*

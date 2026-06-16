@@ -24,13 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $hash    = password_hash($newPwd, PASSWORD_BCRYPT, ['cost' => 12]);
             $db->prepare("UPDATE users SET password = ? WHERE id = ?")->execute([$hash, $user['id']]);
 
-            $subject = APP_NAME . ' – Password Reset';
+            $subject  = APP_NAME . ' – Password Reset';
+            $appName  = APP_NAME;
             $loginUrl = BASE_URL . '/app/auth/login.php';
             $body = <<<HTML
 <!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;color:#1f2937;padding:24px;">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 4px 16px rgba(0,0,0,.07);">
-    <h2 style="color:#0b1f3a;">{$_ENV['APP_NAME']}</h2>
+    <h2 style="color:#0b1f3a;">{$appName}</h2>
     <p>Hello <strong>{$user['full_name']}</strong>,</p>
     <p>A password reset was requested for your account. Your new temporary password is:</p>
     <div style="background:#eef4ff;border-left:4px solid #0b5ed7;padding:14px;border-radius:8px;margin:16px 0;">
