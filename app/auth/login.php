@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="mb-4">
           <div class="d-flex justify-content-between align-items-center mb-1">
             <label class="form-label mb-0" for="password">Password</label>
-            <a href="<?= h(BASE_URL . '/app/auth/forgot-password.php') ?>"
+            <a href="<?= h(BASE_URL . '/app/auth/forgot-password') ?>"
                class="small text-primary text-decoration-none">Forgot password?</a>
           </div>
           <div class="input-group">
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
       <p class="text-center text-muted small mb-0">
         New institution?
-        <a href="<?= h(BASE_URL . '/app/register/index.php') ?>" class="text-primary fw-600 text-decoration-none">
+        <a href="<?= h(BASE_URL . '/app/register') ?>" class="text-primary fw-600 text-decoration-none">
           Register here
         </a>
       </p>

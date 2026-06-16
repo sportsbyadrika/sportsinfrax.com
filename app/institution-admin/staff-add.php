@@ -11,7 +11,7 @@ $instStmt->execute([$instId]);
 $inst = $instStmt->fetch();
 if (!$inst || !in_array($inst['status'], ['pending_approval','active'])) {
     setFlash('error', 'Institution not ready for staff management.');
-    header('Location: ' . BASE_URL . '/app/institution-admin/profile.php');
+    header('Location: ' . BASE_URL . '/app/institution-admin/profile');
     exit;
 }
 
@@ -26,7 +26,7 @@ if ($editId) {
     );
     $stmt->execute([$editId, $instId]);
     $staff = $stmt->fetch();
-    if (!$staff) { setFlash('error', 'Staff not found.'); header('Location: ' . BASE_URL . '/app/institution-admin/staff.php'); exit; }
+    if (!$staff) { setFlash('error', 'Staff not found.'); header('Location: ' . BASE_URL . '/app/institution-admin/staff'); exit; }
 }
 
 $error = '';
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (!$error) {
-            header('Location: ' . BASE_URL . '/app/institution-admin/staff.php');
+            header('Location: ' . BASE_URL . '/app/institution-admin/staff');
             exit;
         }
     }
@@ -88,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $isEdit      = (bool)$editId;
 $pageTitle   = $isEdit ? 'Edit Staff Member' : 'Add Staff Member';
 $breadcrumbs = [
-    'Dashboard' => BASE_URL . '/app/institution-admin/dashboard.php',
-    'Staff'     => BASE_URL . '/app/institution-admin/staff.php',
+    'Dashboard' => BASE_URL . '/app/institution-admin/dashboard',
+    'Staff'     => BASE_URL . '/app/institution-admin/staff',
     $pageTitle  => '',
 ];
 require_once APP_ROOT . '/includes/header.php';
@@ -166,7 +166,7 @@ require_once APP_ROOT . '/includes/header.php';
             <button type="submit" class="btn btn-primary">
               <i class="bi bi-check2 me-1"></i><?= $isEdit ? 'Update Staff' : 'Add Staff & Send Login' ?>
             </button>
-            <a href="<?= h(BASE_URL . '/app/institution-admin/staff.php') ?>" class="btn btn-outline-secondary">Cancel</a>
+            <a href="<?= h(BASE_URL . '/app/institution-admin/staff') ?>" class="btn btn-outline-secondary">Cancel</a>
           </div>
         </form>
       </div>

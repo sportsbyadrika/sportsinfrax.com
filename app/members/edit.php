@@ -9,7 +9,7 @@ $id     = (int)($_GET['id'] ?? 0);
 $stmt = $db->prepare("SELECT * FROM members WHERE id = ? AND institution_id = ? AND is_active = 1");
 $stmt->execute([$id, $instId]);
 $member = $stmt->fetch();
-if (!$member) { setFlash('error', 'Member not found.'); header('Location: ' . BASE_URL . '/app/members/index.php'); exit; }
+if (!$member) { setFlash('error', 'Member not found.'); header('Location: ' . BASE_URL . '/app/members/list'); exit; }
 
 $error = '';
 
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $instId,
             ]);
             setFlash('success', 'Member updated successfully.');
-            header('Location: ' . BASE_URL . '/app/members/view.php?id=' . $id);
+            header('Location: ' . BASE_URL . '/app/members/view?id=' . $id);
             exit;
         }
     }
@@ -85,8 +85,8 @@ $m           = $member; // alias for form
 $pageTitle   = 'Edit Member – ' . h($member['first_name'] . ' ' . $member['last_name']);
 $breadcrumbs = [
     'Dashboard' => dashboardUrl(),
-    'Members'   => BASE_URL . '/app/members/index.php',
-    $member['first_name'] . ' ' . $member['last_name'] => BASE_URL . '/app/members/view.php?id=' . $id,
+    'Members'   => BASE_URL . '/app/members/list',
+    $member['first_name'] . ' ' . $member['last_name'] => BASE_URL . '/app/members/view?id=' . $id,
     'Edit'      => '',
 ];
 require_once APP_ROOT . '/includes/header.php';
@@ -224,7 +224,7 @@ require_once APP_ROOT . '/includes/header.php';
       <div class="card-footer">
         <div class="d-grid gap-2">
           <button type="submit" class="btn btn-primary"><i class="bi bi-check2 me-2"></i>Save Changes</button>
-          <a href="<?= h(BASE_URL . '/app/members/view.php?id=' . $id) ?>" class="btn btn-outline-secondary">Cancel</a>
+          <a href="<?= h(BASE_URL . '/app/members/view?id=' . $id) ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </div>
     </div>

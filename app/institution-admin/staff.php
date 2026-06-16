@@ -11,7 +11,7 @@ $stmt->execute([$instId]);
 $inst = $stmt->fetch();
 if (!$inst || !in_array($inst['status'], ['pending_approval','active'])) {
     setFlash('error', 'Complete your institution profile before managing staff.');
-    header('Location: ' . BASE_URL . '/app/institution-admin/profile.php');
+    header('Location: ' . BASE_URL . '/app/institution-admin/profile');
     exit;
 }
 
@@ -43,8 +43,8 @@ $listStmt->execute($params);
 $staffList = $listStmt->fetchAll();
 
 $pageTitle   = 'Staff Management';
-$breadcrumbs = ['Dashboard' => BASE_URL . '/app/institution-admin/dashboard.php', 'Staff' => ''];
-$pageAction  = '<a href="' . h(BASE_URL . '/app/institution-admin/staff-add.php') . '" class="btn btn-primary btn-sm">
+$breadcrumbs = ['Dashboard' => BASE_URL . '/app/institution-admin/dashboard', 'Staff' => ''];
+$pageAction  = '<a href="' . h(BASE_URL . '/app/institution-admin/staff-add') . '" class="btn btn-primary btn-sm">
                   <i class="bi bi-plus-circle me-1"></i>Add Staff
                 </a>';
 require_once APP_ROOT . '/includes/header.php';
@@ -72,7 +72,7 @@ require_once APP_ROOT . '/includes/header.php';
     <span><i class="bi bi-person-badge me-2 text-primary"></i>Staff Members
       <span class="badge bg-secondary ms-1"><?= $total ?></span>
     </span>
-    <a href="<?= h(BASE_URL . '/app/institution-admin/staff-add.php') ?>" class="btn btn-sm btn-primary d-md-none">
+    <a href="<?= h(BASE_URL . '/app/institution-admin/staff-add') ?>" class="btn btn-sm btn-primary d-md-none">
       <i class="bi bi-plus"></i>
     </a>
   </div>
@@ -120,11 +120,11 @@ require_once APP_ROOT . '/includes/header.php';
           </td>
           <td>
             <div class="d-flex gap-1">
-              <a href="<?= h(BASE_URL . '/app/institution-admin/staff-add.php?id=' . $s['id']) ?>"
+              <a href="<?= h(BASE_URL . '/app/institution-admin/staff-add?id=' . $s['id']) ?>"
                  class="btn btn-sm btn-outline-primary btn-icon" title="Edit" data-bs-toggle="tooltip">
                 <i class="bi bi-pencil"></i>
               </a>
-              <form method="POST" action="<?= h(BASE_URL . '/app/institution-admin/staff-toggle.php') ?>">
+              <form method="POST" action="<?= h(BASE_URL . '/app/institution-admin/staff-toggle') ?>">
                 <?= csrfField() ?>
                 <input type="hidden" name="staff_id" value="<?= $s['id'] ?>">
                 <input type="hidden" name="user_id" value="<?= $s['user_id'] ?>">
@@ -147,7 +147,7 @@ require_once APP_ROOT . '/includes/header.php';
             <i class="bi bi-person-badge"></i>
             <h6>No staff members yet</h6>
             <p class="small">Add your first staff member to get started.</p>
-            <a href="<?= h(BASE_URL . '/app/institution-admin/staff-add.php') ?>" class="btn btn-primary btn-sm">Add Staff</a>
+            <a href="<?= h(BASE_URL . '/app/institution-admin/staff-add') ?>" class="btn btn-primary btn-sm">Add Staff</a>
           </div>
         </td></tr>
         <?php endif; ?>
@@ -157,7 +157,7 @@ require_once APP_ROOT . '/includes/header.php';
   <?php if ($total > $perPage): ?>
   <div class="card-footer d-flex justify-content-between">
     <span class="text-muted small">Showing <?= min($offset+1,$total) ?>–<?= min($offset+$perPage,$total) ?> of <?= $total ?></span>
-    <?= paginate($total, $page, $perPage, BASE_URL . '/app/institution-admin/staff.php') ?>
+    <?= paginate($total, $page, $perPage, BASE_URL . '/app/institution-admin/staff') ?>
   </div>
   <?php endif; ?>
 </div>

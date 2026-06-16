@@ -19,5 +19,5 @@ if (!$stmt->fetch()) {
     setFlash('success', 'Staff account ' . ($active ? 'activated' : 'deactivated') . '.');
 }
 
-header('Location: ' . BASE_URL . '/app/institution-admin/staff.php');
+header('Location: ' . BASE_URL . '/app/institution-admin/staff');
 exit;

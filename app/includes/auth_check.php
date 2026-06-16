@@ -11,7 +11,7 @@ function isLoggedIn(): bool
 function requireLogin(string $redirectTo = ''): void
 {
     if (!isLoggedIn()) {
-        $back = $redirectTo ?: BASE_URL . '/app/auth/login.php';
+        $back = $redirectTo ?: BASE_URL . '/app/auth/login';
         header('Location: ' . $back);
         exit;
     }
@@ -42,10 +42,10 @@ function requireRole(array|string $roles): void
 function dashboardUrl(): string
 {
     return match($_SESSION['user_role'] ?? '') {
-        'super_admin'       => BASE_URL . '/app/super-admin/dashboard.php',
-        'institution_admin' => BASE_URL . '/app/institution-admin/dashboard.php',
-        'staff'             => BASE_URL . '/app/staff/dashboard.php',
-        default             => BASE_URL . '/app/auth/login.php',
+        'super_admin'       => BASE_URL . '/app/super-admin/dashboard',
+        'institution_admin' => BASE_URL . '/app/institution-admin/dashboard',
+        'staff'             => BASE_URL . '/app/staff/dashboard',
+        default             => BASE_URL . '/app/auth/login',
     };
 }
 

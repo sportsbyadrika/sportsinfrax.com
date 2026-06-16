@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlash('success', "Member {$firstName} {$lastName} (Code: {$memberCode}) registered successfully!");
 
             // Redirect to add membership
-            header('Location: ' . BASE_URL . '/app/members/membership-add.php?member_id=' . $newMemberId . '&new=1');
+            header('Location: ' . BASE_URL . '/app/members/membership-add?member_id=' . $newMemberId . '&new=1');
             exit;
         }
     }
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pageTitle   = 'Add New Member';
 $breadcrumbs = [
     'Dashboard' => dashboardUrl(),
-    'Members'   => BASE_URL . '/app/members/index.php',
+    'Members'   => BASE_URL . '/app/members/list',
     'Add Member'=> '',
 ];
 require_once APP_ROOT . '/includes/header.php';
@@ -298,7 +298,7 @@ require_once APP_ROOT . '/includes/header.php';
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-person-plus me-2"></i>Save Member
           </button>
-          <a href="<?= h(BASE_URL . '/app/members/index.php') ?>" class="btn btn-outline-secondary">Cancel</a>
+          <a href="<?= h(BASE_URL . '/app/members/list') ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
       </div>
     </div>

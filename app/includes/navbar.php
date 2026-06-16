@@ -40,22 +40,22 @@ $instActive = $institution && $institution['status'] === 'active';
 // Nav items: [label, href, section]
 $navItems = match($userRole) {
     'super_admin' => [
-        ['Dashboard',    BASE_URL . '/app/super-admin/dashboard.php',    'dashboard'],
-        ['Institutions', BASE_URL . '/app/super-admin/institutions.php', 'institutions'],
+        ['Dashboard',    BASE_URL . '/app/super-admin/dashboard',    'dashboard'],
+        ['Institutions', BASE_URL . '/app/super-admin/institutions', 'institutions'],
     ],
     'institution_admin' => array_values(array_filter([
-        ['Institution', BASE_URL . '/app/institution-admin/institution-menu.php', 'institution'],
-        $instReady  ? ['Members',  BASE_URL . '/app/members/menu.php',           'members']  : null,
-        $instActive ? ['Services', BASE_URL . '/app/services/index.php',          'services'] : null,
-        $instActive ? ['Accounts', BASE_URL . '/app/accounts/index.php',          'accounts'] : null,
-        $instActive ? ['Reports',  BASE_URL . '/app/reports/index.php',           'reports']  : null,
-        ['Settings',    BASE_URL . '/app/settings/index.php',                    'settings'],
+        ['Institution', BASE_URL . '/app/institution-admin', 'institution'],
+        $instReady  ? ['Members',  BASE_URL . '/app/members',   'members']  : null,
+        $instActive ? ['Services', BASE_URL . '/app/services',  'services'] : null,
+        $instActive ? ['Accounts', BASE_URL . '/app/accounts',  'accounts'] : null,
+        $instActive ? ['Reports',  BASE_URL . '/app/reports',   'reports']  : null,
+        ['Settings',    BASE_URL . '/app/settings',             'settings'],
     ])),
     'staff' => array_values(array_filter([
-        $instActive ? ['Members',  BASE_URL . '/app/members/menu.php',   'members']  : null,
-        $instActive ? ['Services', BASE_URL . '/app/services/index.php', 'services'] : null,
-        $instActive ? ['Accounts', BASE_URL . '/app/accounts/index.php', 'accounts'] : null,
-        $instActive ? ['Reports',  BASE_URL . '/app/reports/index.php',  'reports']  : null,
+        $instActive ? ['Members',  BASE_URL . '/app/members',  'members']  : null,
+        $instActive ? ['Services', BASE_URL . '/app/services', 'services'] : null,
+        $instActive ? ['Accounts', BASE_URL . '/app/accounts', 'accounts'] : null,
+        $instActive ? ['Reports',  BASE_URL . '/app/reports',  'reports']  : null,
     ])),
     default => [],
 };
@@ -122,13 +122,13 @@ $navItems = match($userRole) {
             </li>
             <li><hr class="dropdown-divider my-1"></li>
             <li>
-              <a class="dropdown-item" href="<?= h(BASE_URL . '/app/auth/change-password.php') ?>">
+              <a class="dropdown-item" href="<?= h(BASE_URL . '/app/auth/change-password') ?>">
                 <i class="bi bi-key me-2"></i>Change Password
               </a>
             </li>
             <li><hr class="dropdown-divider my-1"></li>
             <li>
-              <a class="dropdown-item text-danger" href="<?= h(BASE_URL . '/app/auth/logout.php') ?>">
+              <a class="dropdown-item text-danger" href="<?= h(BASE_URL . '/app/auth/logout') ?>">
                 <i class="bi bi-box-arrow-right me-2"></i>Logout
               </a>
             </li>

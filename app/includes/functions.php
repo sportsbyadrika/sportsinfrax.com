@@ -465,6 +465,113 @@ function institutionTypeLabel(string $type): string
     return $rows[$type]['label'] ?? ucwords(str_replace('_', ' ', $type));
 }
 
+// ── Menu Registry ─────────────────────────────────────────
+
+/**
+ * Returns active menu_items rows for a hub page, filtered by
+ * institution category, user role, and (for staff) permissions.
+ */
+function getMenuItems(string $parentMenu, string $category, string $role, ?int $userId = null, ?int $instId = null): array
+{
+    static $cache = [];
+    $key = "{$parentMenu}|{$category}|{$role}|{$userId}|{$instId}";
+    if (isset($cache[$key])) return $cache[$key];
+
+    $roleClause = ($role === 'institution_admin')
+        ? "required_role IN ('institution_admin','any')"
+        : "required_role IN ('staff','any')";
+
+    try {
+        $stmt = getDB()->prepare(
+            "SELECT * FROM menu_items
+              WHERE parent_menu = ?
+                AND (applies_to_category IS NULL OR applies_to_category = ?)
+                AND is_active = 1
+                AND ({$roleClause})
+              ORDER BY sort_order, label"
+        );
+        $stmt->execute([$parentMenu, $category]);
+        $items = $stmt->fetchAll();
+    } catch (Exception $e) {
+        return $cache[$key] = [];
+    }
+
+    if ($role === 'staff' && $userId && $instId) {
+        $perms = _staffPermSet($userId, $instId);
+        $items = array_values(array_filter(
+            $items,
+            fn($item) => !$item['required_permission'] || isset($perms[$item['required_permission']])
+        ));
+    }
+
+    return $cache[$key] = $items;
+}
+
+function _staffPermSet(int $userId, int $instId): array
+{
+    static $cache = [];
+    $key = "{$userId}:{$instId}";
+    if (!isset($cache[$key])) {
+        try {
+            $stmt = getDB()->prepare(
+                "SELECT permission_key FROM staff_permissions WHERE user_id = ? AND institution_id = ?"
+            );
+            $stmt->execute([$userId, $instId]);
+            $cache[$key] = array_flip(array_column($stmt->fetchAll(), 'permission_key'));
+        } catch (Exception $e) {
+            $cache[$key] = [];
+        }
+    }
+    return $cache[$key];
+}
+
+function hasStaffPermission(int $userId, int $instId, string $permissionKey): bool
+{
+    return isset(_staffPermSet($userId, $instId)[$permissionKey]);
+}
+
+/**
+ * Renders a single hub-page card from a menu_items row or a
+ * coming-soon descriptor array with the same keys.
+ *
+ * Keys used: icon, gradient, label, description, route (null = coming soon),
+ *            required_role ('institution_admin' triggers Admin Only badge)
+ */
+function renderMenuHubCard(array $item): string
+{
+    $gradient  = $item['gradient']    ?? 'linear-gradient(135deg,#64748b,#94a3b8)';
+    $icon      = $item['icon']        ?? 'bi-circle-fill';
+    $title     = $item['label']       ?? '';
+    $desc      = $item['description'] ?? '';
+    $route     = $item['route']       ?? null;
+    $adminOnly = ($item['required_role'] ?? 'any') === 'institution_admin';
+    $disabled  = ($route === null);
+
+    $out  = '<div class="col-sm-6 col-lg-4">';
+    $out .= '<div class="card h-100 menu-card' . ($disabled ? ' disabled-card' : '') . '">';
+    $out .= '<div class="card-body d-flex flex-column p-4 position-relative">';
+    if ($disabled) {
+        $out .= '<span class="badge bg-secondary position-absolute top-0 end-0 m-3">Coming Soon</span>';
+    }
+    if ($adminOnly) {
+        $out .= '<span class="menu-card-role-badge">Admin Only</span>';
+    }
+    $out .= '<div class="menu-card-icon" style="background:' . h($gradient) . ';">';
+    $out .= '<i class="bi ' . h($icon) . '"></i></div>';
+    $out .= '<h5 class="fw-bold mt-3 mb-1">' . h($title) . '</h5>';
+    $out .= '<p class="text-muted small flex-grow-1">' . h($desc) . '</p>';
+    if ($route) {
+        $out .= '<a href="' . h(BASE_URL . $route) . '" class="btn btn-primary mt-3">';
+        $out .= '<i class="bi bi-arrow-right me-1"></i>Open</a>';
+    } else {
+        $out .= '<button class="btn btn-secondary mt-3" disabled>Coming Soon</button>';
+    }
+    $out .= '</div></div></div>';
+    return $out;
+}
+
+// ─────────────────────────────────────────────────────────
+
 function institutionStatusBadge(string $status): string
 {
     $map = [

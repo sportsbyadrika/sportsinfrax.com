@@ -1,0 +1,21 @@
+Options -Indexes
+RewriteEngine On
+
+# ── Redirect .php URLs to clean equivalents ──────────────────────────────────
+
+# /path/to/index.php  →  /path/to  (strip trailing /index.php)
+RewriteCond %{THE_REQUEST} \s(/[^?\s]+)/index\.php(\?[^\s]*)?\s [NC]
+RewriteRule ^ %1 [R=301,L,QSA]
+
+# /path/to/page.php   →  /path/to/page
+RewriteCond %{THE_REQUEST} \s(/[^?\s]+?)\.php(\?[^\s]*)?\s [NC]
+RewriteRule ^ %1 [R=301,L,QSA]
+
+# ── Pass through actual files and directories ─────────────────────────────────
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# ── Internally serve .php for extensionless clean URLs ───────────────────────
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L]

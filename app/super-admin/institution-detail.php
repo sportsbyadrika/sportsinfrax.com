@@ -4,7 +4,7 @@ requireRole('super_admin');
 
 $db = getDB();
 $id = (int)($_GET['id'] ?? 0);
-if (!$id) { header('Location: ' . BASE_URL . '/app/super-admin/institutions.php'); exit; }
+if (!$id) { header('Location: ' . BASE_URL . '/app/super-admin/institutions'); exit; }
 
 $stmt = $db->prepare(
     "SELECT i.*, u.email AS admin_email, u.full_name AS admin_name, u.mobile AS admin_mobile,
@@ -15,7 +15,7 @@ $stmt = $db->prepare(
 );
 $stmt->execute([$id]);
 $inst = $stmt->fetch();
-if (!$inst) { setFlash('error', 'Institution not found.'); header('Location: ' . BASE_URL . '/app/super-admin/institutions.php'); exit; }
+if (!$inst) { setFlash('error', 'Institution not found.'); header('Location: ' . BASE_URL . '/app/super-admin/institutions'); exit; }
 
 // Staff count
 $staffCount = (int)$db->prepare("SELECT COUNT(*) FROM staff WHERE institution_id = ? AND is_active = 1")->execute([$id]) ? 0 : 0;
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'appro
 
         // Notify admin via email
         $subject = APP_NAME . ' – Your Institution Has Been Approved';
-        $loginUrl = BASE_URL . '/app/auth/login.php';
+        $loginUrl = BASE_URL . '/app/auth/login';
         $body = <<<HTML
 <!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;padding:24px;">
@@ -66,7 +66,7 @@ HTML;
         sendMail($inst['admin_email'], $subject, $body);
 
         setFlash('success', "Institution '{$inst['institution_name']}' approved successfully!");
-        header('Location: ' . BASE_URL . '/app/super-admin/institution-detail.php?id=' . $id);
+        header('Location: ' . BASE_URL . '/app/super-admin/institution-detail?id=' . $id);
         exit;
     }
 }
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'suspe
     verifyCsrf();
     $db->prepare("UPDATE institutions SET status = 'suspended' WHERE id = ?")->execute([$id]);
     setFlash('warning', "Institution suspended.");
-    header('Location: ' . BASE_URL . '/app/super-admin/institution-detail.php?id=' . $id);
+    header('Location: ' . BASE_URL . '/app/super-admin/institution-detail?id=' . $id);
     exit;
 }
 
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'react
     verifyCsrf();
     $db->prepare("UPDATE institutions SET status = 'active' WHERE id = ?")->execute([$id]);
     setFlash('success', "Institution reactivated.");
-    header('Location: ' . BASE_URL . '/app/super-admin/institution-detail.php?id=' . $id);
+    header('Location: ' . BASE_URL . '/app/super-admin/institution-detail?id=' . $id);
     exit;
 }
 
@@ -95,8 +95,8 @@ $inst = $stmt->fetch();
 
 $pageTitle   = h($inst['institution_name']);
 $breadcrumbs = [
-    'Dashboard'    => BASE_URL . '/app/super-admin/dashboard.php',
-    'Institutions' => BASE_URL . '/app/super-admin/institutions.php',
+    'Dashboard'    => BASE_URL . '/app/super-admin/dashboard',
+    'Institutions' => BASE_URL . '/app/super-admin/institutions',
     $inst['institution_name'] => '',
 ];
 require_once APP_ROOT . '/includes/header.php';
