@@ -44,17 +44,12 @@ define('ALLOWED_DOCS',    ['application/pdf', 'image/jpeg', 'image/png']);
 define('SESSION_LIFETIME', 7200); // 2 hours
 
 // ── Mail Configuration ─────────────────────────────────────
-// SMTP is used when SMTP_HOST + SMTP_USER are set.
-// Falls back to PHP mail() if available, otherwise logs only.
-//
-// *** SET THESE FOR YOUR HOSTING ACCOUNT ***
-// Typical cPanel/shared hosting values:
-//   SMTP_HOST = mail.yourdomain.com  (or smtp.gmail.com etc.)
-//   SMTP_PORT = 587  (STARTTLS) | 465 (SSL) | 25
-//   SMTP_USER = noreply@yourdomain.com
-//   SMTP_PASS = your-email-password
-//   SMTP_SECURE = tls  (for port 587) | ssl (for port 465) | '' (for port 25)
-//
+// Load local SMTP credentials if the file exists (not committed to git).
+// Edit app/config/mail.local.php on the server with your real SMTP details.
+$_localMail = __DIR__ . '/mail.local.php';
+if (file_exists($_localMail)) { require_once $_localMail; }
+unset($_localMail);
+
 define('MAIL_FROM',      getenv('MAIL_FROM')      ?: APP_EMAIL);
 define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: APP_NAME);
 
