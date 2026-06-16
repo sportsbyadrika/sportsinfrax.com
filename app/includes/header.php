@@ -13,6 +13,10 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
   <!-- App CSS -->
   <link href="<?= BASE_URL ?>/app/assets/css/app.css" rel="stylesheet" />
+  <?php if (!empty($useCropper)): ?>
+  <!-- Cropper.js -->
+  <link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" rel="stylesheet" />
+  <?php endif; ?>
 </head>
 <body>
 <?php require_once APP_ROOT . '/includes/navbar.php'; ?>

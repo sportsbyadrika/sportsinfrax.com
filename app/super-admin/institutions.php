@@ -43,8 +43,8 @@ $stmt->execute($params);
 $institutions = $stmt->fetchAll();
 
 $pageTitle   = 'Institutions';
-$breadcrumbs = ['Dashboard' => BASE_URL . '/app/super-admin/dashboard.php', 'Institutions' => ''];
-$pageAction  = '<a href="' . h(BASE_URL . '/app/register/index.php') . '" class="btn btn-sm btn-outline-primary" target="_blank">
+$breadcrumbs = ['Dashboard' => BASE_URL . '/app/super-admin/dashboard', 'Institutions' => ''];
+$pageAction  = '<a href="' . h(BASE_URL . '/app/register') . '" class="btn btn-sm btn-outline-primary" target="_blank">
                   <i class="bi bi-plus-circle me-1"></i>Register New
                 </a>';
 require_once APP_ROOT . '/includes/header.php';
@@ -73,7 +73,7 @@ require_once APP_ROOT . '/includes/header.php';
     </div>
     <div class="col-sm-auto">
       <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-      <a href="<?= h(BASE_URL . '/app/super-admin/institutions.php') ?>" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+      <a href="<?= h(BASE_URL . '/app/super-admin/institutions') ?>" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
     </div>
   </form>
 </div>
@@ -138,7 +138,7 @@ require_once APP_ROOT . '/includes/header.php';
             <?php endif; ?>
           </td>
           <td>
-            <a href="<?= h(BASE_URL . '/app/super-admin/institution-detail.php?id=' . $inst['id']) ?>"
+            <a href="<?= h(BASE_URL . '/app/super-admin/institution-detail?id=' . $inst['id']) ?>"
                class="btn btn-sm btn-outline-primary btn-icon" title="View Details"
                data-bs-toggle="tooltip">
               <i class="bi bi-eye"></i>
@@ -161,7 +161,7 @@ require_once APP_ROOT . '/includes/header.php';
   <?php if ($total > $perPage): ?>
   <div class="card-footer d-flex justify-content-between align-items-center">
     <span class="text-muted small">Showing <?= min($offset + 1, $total) ?>–<?= min($offset + $perPage, $total) ?> of <?= $total ?></span>
-    <?= paginate($total, $page, $perPage, BASE_URL . '/app/super-admin/institutions.php') ?>
+    <?= paginate($total, $page, $perPage, BASE_URL . '/app/super-admin/institutions') ?>
   </div>
   <?php endif; ?>
 </div>

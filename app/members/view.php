@@ -9,7 +9,7 @@ $id     = (int)($_GET['id'] ?? 0);
 $stmt = $db->prepare("SELECT * FROM members WHERE id = ? AND institution_id = ? AND is_active = 1");
 $stmt->execute([$id, $instId]);
 $member = $stmt->fetch();
-if (!$member) { setFlash('error', 'Member not found.'); header('Location: ' . BASE_URL . '/app/members/index.php'); exit; }
+if (!$member) { setFlash('error', 'Member not found.'); header('Location: ' . BASE_URL . '/app/members/list'); exit; }
 
 // Memberships
 $msStmt = $db->prepare(
@@ -37,14 +37,14 @@ $fullName    = $member['first_name'] . ' ' . $member['last_name'];
 $pageTitle   = $fullName;
 $breadcrumbs = [
     'Dashboard' => dashboardUrl(),
-    'Members'   => BASE_URL . '/app/members/index.php',
+    'Members'   => BASE_URL . '/app/members/list',
     $fullName   => '',
 ];
 $pageAction  = '<div class="d-flex gap-2">
-  <a href="' . h(BASE_URL . '/app/members/edit.php?id=' . $id) . '" class="btn btn-sm btn-outline-primary">
+  <a href="' . h(BASE_URL . '/app/members/edit?id=' . $id) . '" class="btn btn-sm btn-outline-primary">
     <i class="bi bi-pencil me-1"></i>Edit
   </a>
-  <a href="' . h(BASE_URL . '/app/members/membership-add.php?member_id=' . $id) . '" class="btn btn-sm btn-primary">
+  <a href="' . h(BASE_URL . '/app/members/membership-add?member_id=' . $id) . '" class="btn btn-sm btn-primary">
     <i class="bi bi-card-checklist me-1"></i>Add/Renew Membership
   </a>
 </div>';
@@ -97,7 +97,7 @@ require_once APP_ROOT . '/includes/header.php';
         <?php endif; ?>
         <?php if ($member['id_type']): ?>
         <div class="d-flex justify-content-between mb-2"><span class="text-muted">ID Type</span><span><?= h(ucfirst(str_replace('_',' ',$member['id_type']))) ?></span></div>
-        <div class="d-flex justify-content-between mb-2"><span class="text-muted">ID Number</span><span><?= h($member['id_number'] ?? '—') ?></span></div>
+        <div class="d-flex justify-content-between mb-2"><span class="text-muted">ID Number</span><span class="font-monospace"><?= h(maskIdNumber($member['id_number'] ?? null)) ?></span></div>
         <?php endif; ?>
         <?php if ($member['address']): ?>
         <div class="pt-2 border-top">
@@ -136,7 +136,7 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-card-checklist me-2 text-primary"></i>Memberships</span>
-        <a href="<?= h(BASE_URL . '/app/members/membership-add.php?member_id=' . $id) ?>"
+        <a href="<?= h(BASE_URL . '/app/members/membership-add?member_id=' . $id) ?>"
            class="btn btn-sm btn-primary">
           <i class="bi bi-plus me-1"></i>Add/Renew
         </a>
@@ -179,7 +179,7 @@ require_once APP_ROOT . '/includes/header.php';
                 </td>
                 <td><?= paymentStatusBadge($ms['payment_status']) ?></td>
                 <td>
-                  <a href="<?= h(BASE_URL . '/app/members/payment-add.php?membership_id=' . $ms['id'] . '&member_id=' . $id) ?>"
+                  <a href="<?= h(BASE_URL . '/app/members/payment-add?membership_id=' . $ms['id'] . '&member_id=' . $id) ?>"
                      class="btn btn-sm btn-outline-success btn-icon" title="Add Payment" data-bs-toggle="tooltip">
                     <i class="bi bi-cash-coin"></i>
                   </a>
@@ -193,7 +193,7 @@ require_once APP_ROOT . '/includes/header.php';
         <div class="empty-state py-4">
           <i class="bi bi-card-checklist"></i>
           <h6>No memberships</h6>
-          <a href="<?= h(BASE_URL . '/app/members/membership-add.php?member_id=' . $id) ?>"
+          <a href="<?= h(BASE_URL . '/app/members/membership-add?member_id=' . $id) ?>"
              class="btn btn-primary btn-sm mt-2">Add First Membership</a>
         </div>
         <?php endif; ?>

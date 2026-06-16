@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $subject  = APP_NAME . ' – Password Reset';
             $appName  = APP_NAME;
-            $loginUrl = BASE_URL . '/app/auth/login.php';
+            $loginUrl = BASE_URL . '/app/auth/login';
             $body = <<<HTML
 <!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;color:#1f2937;padding:24px;">
@@ -72,7 +72,7 @@ HTML;
           <div style="font-size:3rem;color:#10b981;"><i class="bi bi-envelope-check-fill"></i></div>
           <h5 class="fw-bold mt-3">Check your email</h5>
           <p class="text-muted small">If that email is registered, we've sent a temporary password. Please check your inbox (and spam folder).</p>
-          <a href="<?= h(BASE_URL . '/app/auth/login.php') ?>" class="btn btn-primary mt-2 w-100">Back to Login</a>
+          <a href="<?= h(BASE_URL . '/app/auth/login') ?>" class="btn btn-primary mt-2 w-100">Back to Login</a>
         </div>
       <?php else: ?>
         <h5 class="fw-bold mb-1 text-center">Forgot your password?</h5>
@@ -98,7 +98,7 @@ HTML;
         </form>
 
         <p class="text-center text-muted small mt-4 mb-0">
-          <a href="<?= h(BASE_URL . '/app/auth/login.php') ?>" class="text-primary text-decoration-none">
+          <a href="<?= h(BASE_URL . '/app/auth/login') ?>" class="text-primary text-decoration-none">
             ← Back to Login
           </a>
         </p>

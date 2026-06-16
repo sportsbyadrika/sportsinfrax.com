@@ -11,7 +11,7 @@ function isLoggedIn(): bool
 function requireLogin(string $redirectTo = ''): void
 {
     if (!isLoggedIn()) {
-        $back = $redirectTo ?: BASE_URL . '/app/auth/login.php';
+        $back = $redirectTo ?: BASE_URL . '/app/auth/login';
         header('Location: ' . $back);
         exit;
     }
@@ -42,10 +42,10 @@ function requireRole(array|string $roles): void
 function dashboardUrl(): string
 {
     return match($_SESSION['user_role'] ?? '') {
-        'super_admin'       => BASE_URL . '/app/super-admin/dashboard.php',
-        'institution_admin' => BASE_URL . '/app/institution-admin/dashboard.php',
-        'staff'             => BASE_URL . '/app/staff/dashboard.php',
-        default             => BASE_URL . '/app/auth/login.php',
+        'super_admin'       => BASE_URL . '/app/super-admin/dashboard',
+        'institution_admin' => BASE_URL . '/app/institution-admin/dashboard',
+        'staff'             => BASE_URL . '/app/staff/dashboard',
+        default             => BASE_URL . '/app/auth/login',
     };
 }
 
@@ -87,4 +87,36 @@ function logoutUser(): void
             $p['path'], $p['domain'], $p['secure'], $p['httponly']);
     }
     session_destroy();
+}
+
+// ── Permission Gate ────────────────────────────────────────
+
+/**
+ * Returns true if the logged-in user may perform module+action (optionally scoped).
+ * super_admin and institution_admin always return true.
+ * Staff are checked against staff_permissions via hasStaffPermission().
+ */
+function canDo(string $module, string $action, string $scope = 'all'): bool
+{
+    $role = authRole();
+    if ($role === 'super_admin' || $role === 'institution_admin') return true;
+    if ($role !== 'staff') return false;
+    $userId = authId();
+    $instId = authInstId();
+    if (!$userId || !$instId) return false;
+    return hasStaffPermission($userId, $instId, $module . '.' . $action, $scope);
+}
+
+/**
+ * Gate — redirects to dashboard with error flash if the current user
+ * cannot perform the given module+action (optionally scoped).
+ */
+function requirePermission(string $module, string $action, string $scope = 'all'): void
+{
+    requireLogin();
+    if (!canDo($module, $action, $scope)) {
+        setFlash('error', 'You do not have permission to perform this action.');
+        header('Location: ' . dashboardUrl());
+        exit;
+    }
 }

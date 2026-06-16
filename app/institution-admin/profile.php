@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             setFlash('success', $inst['status'] === 'pending_profile'
                 ? 'Profile submitted for approval! The Super Admin will review your details.'
                 : 'Institution profile updated successfully.');
-            header('Location: ' . BASE_URL . '/app/institution-admin/profile.php');
+            header('Location: ' . BASE_URL . '/app/institution-admin/profile');
             exit;
         }
     }
@@ -93,7 +93,7 @@ $stmt->execute([$instId]);
 $inst = $stmt->fetch();
 
 $pageTitle   = 'Institution Profile';
-$breadcrumbs = ['Dashboard' => BASE_URL . '/app/institution-admin/dashboard.php', 'Institution Profile' => ''];
+$breadcrumbs = ['Dashboard' => BASE_URL . '/app/institution-admin/dashboard', 'Institution Profile' => ''];
 require_once APP_ROOT . '/includes/header.php';
 ?>
 
@@ -279,7 +279,7 @@ require_once APP_ROOT . '/includes/header.php';
     <i class="bi bi-check2 me-2"></i>
     <?= $inst['status'] === 'pending_profile' ? 'Save & Submit for Approval' : 'Save Changes' ?>
   </button>
-  <a href="<?= h(BASE_URL . '/app/institution-admin/dashboard.php') ?>" class="btn btn-outline-secondary">
+  <a href="<?= h(BASE_URL . '/app/institution-admin/dashboard') ?>" class="btn btn-outline-secondary">
     Cancel
   </a>
 </div>

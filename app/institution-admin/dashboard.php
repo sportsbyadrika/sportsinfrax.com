@@ -9,7 +9,7 @@ $stmt = $db->prepare("SELECT * FROM institutions WHERE id = ?");
 $stmt->execute([$instId]);
 $inst = $stmt->fetch();
 
-if (!$inst) { setFlash('error', 'Institution not found.'); logoutUser(); header('Location: ' . BASE_URL . '/app/auth/login.php'); exit; }
+if (!$inst) { setFlash('error', 'Institution not found.'); logoutUser(); header('Location: ' . BASE_URL . '/app/auth/login'); exit; }
 
 // Stats
 $staffCount  = (int)$db->prepare("SELECT COUNT(*) FROM staff WHERE institution_id = ? AND is_active = 1")->execute([$instId]) ? 0 : 0;
@@ -58,7 +58,7 @@ require_once APP_ROOT . '/includes/header.php';
   <div>
     <h6 class="fw-bold mb-1">Complete Your Institution Profile</h6>
     <p class="mb-2 small opacity-90">Please complete your institution profile (logo, type, registration details) to submit for Super Admin approval.</p>
-    <a href="<?= h(BASE_URL . '/app/institution-admin/profile.php') ?>" class="btn btn-light btn-sm">
+    <a href="<?= h(BASE_URL . '/app/institution-admin/profile') ?>" class="btn btn-light btn-sm">
       Complete Profile →
     </a>
   </div>
@@ -134,7 +134,7 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-building me-2 text-primary"></i>Institution</span>
-        <a href="<?= h(BASE_URL . '/app/institution-admin/profile.php') ?>" class="btn btn-sm btn-outline-primary">
+        <a href="<?= h(BASE_URL . '/app/institution-admin/profile') ?>" class="btn btn-sm btn-outline-primary">
           <i class="bi bi-pencil me-1"></i>Edit
         </a>
       </div>
@@ -176,10 +176,10 @@ require_once APP_ROOT . '/includes/header.php';
         <span><i class="bi bi-people me-2 text-primary"></i>Recent Members</span>
         <?php if ($inst['status'] === 'active'): ?>
         <div class="d-flex gap-2">
-          <a href="<?= h(BASE_URL . '/app/members/add.php') ?>" class="btn btn-sm btn-primary">
+          <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-sm btn-primary">
             <i class="bi bi-plus me-1"></i>Add Member
           </a>
-          <a href="<?= h(BASE_URL . '/app/members/index.php') ?>" class="btn btn-sm btn-outline-primary">All</a>
+          <a href="<?= h(BASE_URL . '/app/members/list') ?>" class="btn btn-sm btn-outline-primary">All</a>
         </div>
         <?php endif; ?>
       </div>

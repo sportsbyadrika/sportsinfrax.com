@@ -15,7 +15,7 @@ $msStmt = $db->prepare(
 );
 $msStmt->execute([$membershipId, $instId]);
 $ms = $msStmt->fetch();
-if (!$ms) { setFlash('error', 'Membership not found.'); header('Location: ' . BASE_URL . '/app/members/index.php'); exit; }
+if (!$ms) { setFlash('error', 'Membership not found.'); header('Location: ' . BASE_URL . '/app/members/list'); exit; }
 
 $memberId = $memberId ?: $ms['member_id'];
 
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                ->execute([$status, $membershipId]);
 
             setFlash('success', 'Payment of ₹' . number_format($amount, 2) . ' recorded successfully.');
-            header('Location: ' . BASE_URL . '/app/members/payment-add.php?membership_id=' . $membershipId . '&member_id=' . $memberId);
+            header('Location: ' . BASE_URL . '/app/members/payment-add?membership_id=' . $membershipId . '&member_id=' . $memberId);
             exit;
         }
     }
@@ -89,8 +89,8 @@ $fullName    = $ms['first_name'] . ' ' . $ms['last_name'];
 $pageTitle   = 'Add Payment – ' . $fullName;
 $breadcrumbs = [
     'Dashboard'  => dashboardUrl(),
-    'Members'    => BASE_URL . '/app/members/index.php',
-    $fullName    => BASE_URL . '/app/members/view.php?id=' . $memberId,
+    'Members'    => BASE_URL . '/app/members/list',
+    $fullName    => BASE_URL . '/app/members/view?id=' . $memberId,
     'Add Payment'=> '',
 ];
 require_once APP_ROOT . '/includes/header.php';
@@ -231,7 +231,7 @@ require_once APP_ROOT . '/includes/header.php';
             <button type="submit" class="btn btn-primary px-4">
               <i class="bi bi-cash me-2"></i>Record Payment
             </button>
-            <a href="<?= h(BASE_URL . '/app/members/view.php?id=' . $memberId) ?>"
+            <a href="<?= h(BASE_URL . '/app/members/view?id=' . $memberId) ?>"
                class="btn btn-outline-secondary">Back to Member</a>
           </div>
         </form>

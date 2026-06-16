@@ -10,7 +10,7 @@ $isNew    = (bool)($_GET['new'] ?? false);
 $mStmt = $db->prepare("SELECT * FROM members WHERE id = ? AND institution_id = ? AND is_active = 1");
 $mStmt->execute([$memberId, $instId]);
 $member = $mStmt->fetch();
-if (!$member) { setFlash('error', 'Member not found.'); header('Location: ' . BASE_URL . '/app/members/index.php'); exit; }
+if (!$member) { setFlash('error', 'Member not found.'); header('Location: ' . BASE_URL . '/app/members/list'); exit; }
 
 // Last membership for renewal suggestion
 $lastMs = $db->prepare("SELECT * FROM memberships WHERE member_id = ? ORDER BY created_at DESC LIMIT 1");
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msId = (int)$db->lastInsertId();
 
         setFlash('success', "Membership #{$msNumber} created. Please add payment details.");
-        header('Location: ' . BASE_URL . '/app/members/payment-add.php?membership_id=' . $msId . '&member_id=' . $memberId);
+        header('Location: ' . BASE_URL . '/app/members/payment-add?membership_id=' . $msId . '&member_id=' . $memberId);
         exit;
     }
 }
@@ -61,8 +61,8 @@ $fullName    = $member['first_name'] . ' ' . $member['last_name'];
 $pageTitle   = ($prevMs ? 'Renew Membership' : 'Add Membership') . ' – ' . $fullName;
 $breadcrumbs = [
     'Dashboard'            => dashboardUrl(),
-    'Members'              => BASE_URL . '/app/members/index.php',
-    $fullName              => BASE_URL . '/app/members/view.php?id=' . $memberId,
+    'Members'              => BASE_URL . '/app/members/list',
+    $fullName              => BASE_URL . '/app/members/view?id=' . $memberId,
     ($prevMs ? 'Renew' : 'Add Membership') => '',
 ];
 require_once APP_ROOT . '/includes/header.php';
@@ -200,7 +200,7 @@ require_once APP_ROOT . '/includes/header.php';
             <button type="submit" class="btn btn-primary px-4">
               <i class="bi bi-check2 me-2"></i>Create Membership & Add Payment
             </button>
-            <a href="<?= h(BASE_URL . '/app/members/view.php?id=' . $memberId) ?>"
+            <a href="<?= h(BASE_URL . '/app/members/view?id=' . $memberId) ?>"
                class="btn btn-outline-secondary">Cancel</a>
           </div>
         </form>

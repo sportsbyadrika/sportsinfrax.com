@@ -161,6 +161,184 @@ function uploadFile(array $file, string $destDir, array $allowedMime = []): stri
     return $safeName;
 }
 
+// ── Passport Photo (Cropper) ───────────────────────────────
+
+/**
+ * Decode a base64 data URI image, resize it to 413×531 px via GD, and
+ * save as JPEG to $destDir. Returns the stored filename (basename only).
+ */
+function saveCroppedPhoto(string $dataUri, string $destDir): string
+{
+    if (!preg_match('#^data:image/(jpeg|png|webp|gif);base64,(.+)$#s', $dataUri, $m)) {
+        throw new RuntimeException('Invalid image data URI.');
+    }
+    $imageData = base64_decode($m[2]);
+    if ($imageData === false || strlen($imageData) === 0) {
+        throw new RuntimeException('Failed to decode image data.');
+    }
+    if (strlen($imageData) > MAX_FILE_SIZE) {
+        throw new RuntimeException('Cropped image exceeds 5 MB limit.');
+    }
+
+    $src = @imagecreatefromstring($imageData);
+    if (!$src) throw new RuntimeException('Cannot process image data.');
+
+    $dst = imagecreatetruecolor(413, 531);
+    imagecopyresampled($dst, $src, 0, 0, 0, 0, 413, 531, imagesx($src), imagesy($src));
+    imagedestroy($src);
+
+    if (!is_dir($destDir) && !mkdir($destDir, 0755, true)) {
+        imagedestroy($dst);
+        throw new RuntimeException('Could not create photo directory.');
+    }
+
+    $fileName = bin2hex(random_bytes(16)) . '.jpg';
+    if (!imagejpeg($dst, $destDir . '/' . $fileName, 92)) {
+        imagedestroy($dst);
+        throw new RuntimeException('Failed to save cropped photo.');
+    }
+    imagedestroy($dst);
+    return $fileName;
+}
+
+// ── Attachment Store ───────────────────────────────────────
+
+/**
+ * Validate, move, and record a file upload in the attachments table.
+ * Returns the new attachment row ID.
+ */
+function uploadAttachment(
+    array $file,
+    string $entityType,
+    int $entityId,
+    string $fileCategory,
+    ?int $instId,
+    bool $isSensitive = false
+): int {
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('Upload error code ' . $file['error'] . '.');
+    }
+    if ($file['size'] > MAX_FILE_SIZE) {
+        throw new RuntimeException('File size exceeds 5 MB limit.');
+    }
+
+    $allowedMime = in_array($fileCategory, ['photo', 'logo'], true) ? ALLOWED_IMAGES : ALLOWED_DOCS;
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mime  = $finfo->file($file['tmp_name']);
+    if (!in_array($mime, $allowedMime, true)) {
+        throw new RuntimeException('Invalid file type.');
+    }
+
+    $ext        = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'bin';
+    $storedName = bin2hex(random_bytes(16)) . '.' . $ext;
+    $subPath    = 'attachments/' . $fileCategory;
+    $destDir    = UPLOAD_ROOT . '/' . $subPath;
+
+    if (!is_dir($destDir) && !mkdir($destDir, 0755, true)) {
+        throw new RuntimeException('Could not create upload directory.');
+    }
+    if (!move_uploaded_file($file['tmp_name'], $destDir . '/' . $storedName)) {
+        throw new RuntimeException('Failed to move uploaded file.');
+    }
+
+    $db = getDB();
+    $db->prepare(
+        "INSERT INTO attachments
+         (entity_type, entity_id, institution_id, file_category, original_name,
+          stored_name, storage_path, mime_type, file_size, is_sensitive, uploaded_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    )->execute([
+        $entityType,
+        $entityId,
+        $instId,
+        $fileCategory,
+        $file['name'],
+        $storedName,
+        $subPath . '/' . $storedName,
+        $mime,
+        $file['size'],
+        $isSensitive ? 1 : 0,
+        isLoggedIn() ? authId() : null,
+    ]);
+
+    return (int)$db->lastInsertId();
+}
+
+// ── ID Masking ─────────────────────────────────────────────
+
+/**
+ * Mask an identity number for display: keep last 4 characters visible,
+ * replace the rest with X. Aadhaar (12 numeric digits) formats as XXXX-XXXX-1234.
+ */
+function maskIdNumber(?string $value): string
+{
+    if ($value === null || $value === '') return '—';
+    $clean = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $value));
+    $len   = strlen($clean);
+    if ($len <= 4) return $value;
+    // Aadhaar: exactly 12 numeric digits
+    if ($len === 12 && ctype_digit($clean)) {
+        return 'XXXX-XXXX-' . substr($clean, -4);
+    }
+    return str_repeat('X', $len - 4) . substr($clean, -4);
+}
+
+/**
+ * Returns the value to write to field_change_log — masking sensitive fields.
+ */
+function maskFieldForLog(string $fieldName, ?string $value): ?string
+{
+    if ($value === null) return null;
+    if ($fieldName === 'id_number') return maskIdNumber($value);
+    return $value;
+}
+
+// ── Audit Field Change Log ─────────────────────────────────
+
+/**
+ * Compare $oldData and $newData row arrays; for every tracked field that
+ * changed, write one row to field_change_log with masked sensitive values.
+ */
+function logFieldChanges(
+    string $entityType,
+    int $entityId,
+    ?int $instId,
+    array $oldData,
+    array $newData
+): void {
+    $tracked = AUDIT_TRACKED_FIELDS[$entityType] ?? [];
+    if (!$tracked) return;
+
+    $db        = getDB();
+    $changedBy = isLoggedIn() ? authId() : null;
+    $ip        = $_SERVER['REMOTE_ADDR'] ?? null;
+
+    $stmt = $db->prepare(
+        "INSERT INTO field_change_log
+         (entity_type, entity_id, institution_id, changed_by, field_name, old_value, new_value, ip_address)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    );
+
+    foreach ($tracked as $field) {
+        $oldVal = isset($oldData[$field]) ? (string)$oldData[$field] : null;
+        $newVal = isset($newData[$field]) ? (string)$newData[$field] : null;
+        // Normalise empty string to null for comparison
+        if ($oldVal === '') $oldVal = null;
+        if ($newVal === '') $newVal = null;
+        if ($oldVal === $newVal) continue;
+        $stmt->execute([
+            $entityType,
+            $entityId,
+            $instId,
+            $changedBy,
+            $field,
+            maskFieldForLog($field, $oldVal),
+            maskFieldForLog($field, $newVal),
+            $ip,
+        ]);
+    }
+}
+
 // ── Date Formatting ────────────────────────────────────────
 function fmtDate(?string $date, string $format = 'd M Y'): string
 {
@@ -464,6 +642,126 @@ function institutionTypeLabel(string $type): string
     $rows = _institutionTypeRows();
     return $rows[$type]['label'] ?? ucwords(str_replace('_', ' ', $type));
 }
+
+// ── Menu Registry ─────────────────────────────────────────
+
+/**
+ * Returns active menu_items rows for a hub page, filtered by
+ * institution category, user role, and (for staff) permissions.
+ */
+function getMenuItems(string $parentMenu, string $category, string $role, ?int $userId = null, ?int $instId = null): array
+{
+    static $cache = [];
+    $key = "{$parentMenu}|{$category}|{$role}|{$userId}|{$instId}";
+    if (isset($cache[$key])) return $cache[$key];
+
+    $roleClause = ($role === 'institution_admin')
+        ? "required_role IN ('institution_admin','any')"
+        : "required_role IN ('staff','any')";
+
+    try {
+        $stmt = getDB()->prepare(
+            "SELECT * FROM menu_items
+              WHERE parent_menu = ?
+                AND (applies_to_category IS NULL OR applies_to_category = ?)
+                AND is_active = 1
+                AND ({$roleClause})
+              ORDER BY sort_order, label"
+        );
+        $stmt->execute([$parentMenu, $category]);
+        $items = $stmt->fetchAll();
+    } catch (Exception $e) {
+        return $cache[$key] = [];
+    }
+
+    if ($role === 'staff' && $userId && $instId) {
+        $perms = _staffPermSet($userId, $instId);
+        $items = array_values(array_filter(
+            $items,
+            fn($item) => !$item['required_permission'] || isset($perms[$item['required_permission']])
+        ));
+    }
+
+    return $cache[$key] = $items;
+}
+
+function _staffPermSet(int $userId, int $instId): array
+{
+    static $cache = [];
+    $key = "{$userId}:{$instId}";
+    if (!isset($cache[$key])) {
+        try {
+            $stmt = getDB()->prepare(
+                "SELECT module, action, scope FROM staff_permissions WHERE user_id = ? AND institution_id = ?"
+            );
+            $stmt->execute([$userId, $instId]);
+            $perms = [];
+            foreach ($stmt->fetchAll() as $row) {
+                $perms[$row['module'] . '.' . $row['action']][] = $row['scope'];
+            }
+            $cache[$key] = $perms;
+        } catch (Exception $e) {
+            $cache[$key] = [];
+        }
+    }
+    return $cache[$key];
+}
+
+/**
+ * Check if a staff user has a specific module.action permission.
+ * When $scope is 'all', the user must have the 'all' scope explicitly.
+ * For any other scope, having 'all' also satisfies the check.
+ */
+function hasStaffPermission(int $userId, int $instId, string $moduleAction, string $scope = 'all'): bool
+{
+    $perms = _staffPermSet($userId, $instId);
+    if (!isset($perms[$moduleAction])) return false;
+    $granted = $perms[$moduleAction];
+    if ($scope === 'all') return in_array('all', $granted, true);
+    return in_array('all', $granted, true) || in_array($scope, $granted, true);
+}
+
+/**
+ * Renders a single hub-page card from a menu_items row or a
+ * coming-soon descriptor array with the same keys.
+ *
+ * Keys used: icon, gradient, label, description, route (null = coming soon),
+ *            required_role ('institution_admin' triggers Admin Only badge)
+ */
+function renderMenuHubCard(array $item): string
+{
+    $gradient  = $item['gradient']    ?? 'linear-gradient(135deg,#64748b,#94a3b8)';
+    $icon      = $item['icon']        ?? 'bi-circle-fill';
+    $title     = $item['label']       ?? '';
+    $desc      = $item['description'] ?? '';
+    $route     = $item['route']       ?? null;
+    $adminOnly = ($item['required_role'] ?? 'any') === 'institution_admin';
+    $disabled  = ($route === null);
+
+    $out  = '<div class="col-sm-6 col-lg-4">';
+    $out .= '<div class="card h-100 menu-card' . ($disabled ? ' disabled-card' : '') . '">';
+    $out .= '<div class="card-body d-flex flex-column p-4 position-relative">';
+    if ($disabled) {
+        $out .= '<span class="badge bg-secondary position-absolute top-0 end-0 m-3">Coming Soon</span>';
+    }
+    if ($adminOnly) {
+        $out .= '<span class="menu-card-role-badge">Admin Only</span>';
+    }
+    $out .= '<div class="menu-card-icon" style="background:' . h($gradient) . ';">';
+    $out .= '<i class="bi ' . h($icon) . '"></i></div>';
+    $out .= '<h5 class="fw-bold mt-3 mb-1">' . h($title) . '</h5>';
+    $out .= '<p class="text-muted small flex-grow-1">' . h($desc) . '</p>';
+    if ($route) {
+        $out .= '<a href="' . h(BASE_URL . $route) . '" class="btn btn-primary mt-3">';
+        $out .= '<i class="bi bi-arrow-right me-1"></i>Open</a>';
+    } else {
+        $out .= '<button class="btn btn-secondary mt-3" disabled>Coming Soon</button>';
+    }
+    $out .= '</div></div></div>';
+    return $out;
+}
+
+// ─────────────────────────────────────────────────────────
 
 function institutionStatusBadge(string $status): string
 {

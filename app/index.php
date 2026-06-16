@@ -8,6 +8,6 @@ require_once __DIR__ . '/bootstrap.php';
 if (isLoggedIn()) {
     header('Location: ' . dashboardUrl());
 } else {
-    header('Location: ' . BASE_URL . '/app/auth/login.php');
+    header('Location: ' . BASE_URL . '/app/auth/login');
 }
 exit;

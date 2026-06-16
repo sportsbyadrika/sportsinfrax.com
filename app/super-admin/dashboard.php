@@ -92,7 +92,7 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="card h-100">
       <div class="card-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-building-check me-2 text-warning"></i>Pending Approvals</span>
-        <a href="<?= h(BASE_URL . '/app/super-admin/institutions.php?status=pending_approval') ?>"
+        <a href="<?= h(BASE_URL . '/app/super-admin/institutions?status=pending_approval') ?>"
            class="btn btn-sm btn-outline-warning">View All</a>
       </div>
       <div class="card-body p-0">
@@ -117,7 +117,7 @@ require_once APP_ROOT . '/includes/header.php';
                 <td class="small text-muted"><?= h($inst['admin_email'] ?? '—') ?></td>
                 <td class="small text-muted"><?= fmtDate($inst['created_at'], 'd M Y') ?></td>
                 <td>
-                  <a href="<?= h(BASE_URL . '/app/super-admin/institution-detail.php?id=' . $inst['id']) ?>"
+                  <a href="<?= h(BASE_URL . '/app/super-admin/institution-detail?id=' . $inst['id']) ?>"
                      class="btn btn-sm btn-primary">Review</a>
                 </td>
               </tr>
@@ -141,7 +141,7 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="card h-100">
       <div class="card-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-clipboard-plus me-2 text-primary"></i>Recent Registrations</span>
-        <a href="<?= h(BASE_URL . '/app/super-admin/institutions.php') ?>"
+        <a href="<?= h(BASE_URL . '/app/super-admin/institutions') ?>"
            class="btn btn-sm btn-outline-primary">View All</a>
       </div>
       <div class="card-body p-0">

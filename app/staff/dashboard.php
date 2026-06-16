@@ -80,7 +80,7 @@ require_once APP_ROOT . '/includes/header.php';
     <p class="text-muted small mb-0"><?= h($inst['institution_name'] ?? 'Your Institution') ?></p>
   </div>
   <?php if ($inst && $inst['status'] === 'active'): ?>
-  <a href="<?= h(BASE_URL . '/app/members/add.php') ?>" class="btn btn-primary">
+  <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary">
     <i class="bi bi-plus-circle me-2"></i>Add New Member
   </a>
   <?php endif; ?>
@@ -128,7 +128,7 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-calendar-x me-2 text-warning"></i>Expiring Memberships</span>
-        <a href="<?= h(BASE_URL . '/app/members/index.php?filter=expiring') ?>"
+        <a href="<?= h(BASE_URL . '/app/members/list?filter=expiring') ?>"
            class="btn btn-sm btn-outline-warning">View All</a>
       </div>
       <div class="card-body p-0">
@@ -140,7 +140,7 @@ require_once APP_ROOT . '/includes/header.php';
               <?php foreach ($expMembers as $em): ?>
               <tr>
                 <td>
-                  <a href="<?= h(BASE_URL . '/app/members/view.php?id=' . $em['member_id']) ?>" class="text-decoration-none">
+                  <a href="<?= h(BASE_URL . '/app/members/view?id=' . $em['member_id']) ?>" class="text-decoration-none">
                     <div class="fw-600 small"><?= h($em['first_name'] . ' ' . $em['last_name']) ?></div>
                     <div class="text-muted" style="font-size:.72rem;"><?= h($em['mobile']) ?></div>
                   </a>
@@ -167,7 +167,7 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-person-lines-fill me-2 text-primary"></i>Recent Members</span>
-        <a href="<?= h(BASE_URL . '/app/members/index.php') ?>" class="btn btn-sm btn-outline-primary">All Members</a>
+        <a href="<?= h(BASE_URL . '/app/members/list') ?>" class="btn btn-sm btn-outline-primary">All Members</a>
       </div>
       <div class="card-body p-0">
         <?php if ($recentMembers): ?>
@@ -178,7 +178,7 @@ require_once APP_ROOT . '/includes/header.php';
               <?php foreach ($recentMembers as $m): ?>
               <tr>
                 <td>
-                  <a href="<?= h(BASE_URL . '/app/members/view.php?id=' . $m['id']) ?>" class="text-decoration-none">
+                  <a href="<?= h(BASE_URL . '/app/members/view?id=' . $m['id']) ?>" class="text-decoration-none">
                     <div class="fw-600 small"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></div>
                     <div class="text-muted" style="font-size:.72rem;"><?= h($m['sport_category'] ?? '—') ?></div>
                   </a>
@@ -200,7 +200,7 @@ require_once APP_ROOT . '/includes/header.php';
         <div class="empty-state py-4">
           <i class="bi bi-people"></i>
           <h6>No members yet</h6>
-          <a href="<?= h(BASE_URL . '/app/members/add.php') ?>" class="btn btn-primary btn-sm mt-2">Add Member</a>
+          <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary btn-sm mt-2">Add Member</a>
         </div>
         <?php endif; ?>
       </div>

@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
     if (!$error) {
         // Store data in session and redirect to verify step (PRG pattern)
         $_SESSION['reg_data'] = $data;
-        header('Location: ' . BASE_URL . '/app/register/index.php?step=verify');
+        header('Location: ' . BASE_URL . '/app/register?step=verify');
         exit;
     }
 
@@ -63,7 +63,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'c
 
     if (!$data) {
         setFlash('error', 'Registration session expired. Please fill the form again.');
-        header('Location: ' . BASE_URL . '/app/register/index.php');
+        header('Location: ' . BASE_URL . '/app/register');
         exit;
     }
 
@@ -73,7 +73,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'c
     if ($chk->fetch()) {
         unset($_SESSION['reg_data']);
         setFlash('warning', 'This email was already registered. Please log in or use a different email.');
-        header('Location: ' . BASE_URL . '/app/auth/login.php');
+        header('Location: ' . BASE_URL . '/app/auth/login');
         exit;
     }
 
@@ -127,7 +127,7 @@ elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'c
     unset($_SESSION['reg_data']);
 
     // PRG: redirect to done step (prevents double-submit on refresh)
-    header('Location: ' . BASE_URL . '/app/register/index.php?step=done');
+    header('Location: ' . BASE_URL . '/app/register?step=done');
     exit;
 }
 
@@ -138,7 +138,7 @@ if ($step === 'verify') {
     if (empty($_SESSION['reg_data'])) {
         // Session expired or user navigated directly
         setFlash('warning', 'Your session has expired. Please fill the form again.');
-        header('Location: ' . BASE_URL . '/app/register/index.php');
+        header('Location: ' . BASE_URL . '/app/register');
         exit;
     }
     $d = $_SESSION['reg_data'];
@@ -151,7 +151,7 @@ if ($step === 'done') {
     $regDone = $_SESSION['reg_done'] ?? null;
     if (!$regDone) {
         // Navigated here without completing registration
-        header('Location: ' . BASE_URL . '/app/register/index.php');
+        header('Location: ' . BASE_URL . '/app/register');
         exit;
     }
     $regEmail    = $regDone['email'];
@@ -183,7 +183,7 @@ $isDone   = ($step === 'done');
       <span class="nav-brand-icon"><i class="bi bi-trophy-fill"></i></span>
       <span class="nav-brand-text"><?= h(APP_NAME) ?></span>
     </a>
-    <a href="<?= h(BASE_URL . '/app/auth/login.php') ?>" class="btn btn-outline-light btn-sm">Login</a>
+    <a href="<?= h(BASE_URL . '/app/auth/login') ?>" class="btn btn-outline-light btn-sm">Login</a>
   </div>
 </nav>
 
@@ -232,7 +232,7 @@ $isDone   = ($step === 'done');
               your admin credentials will be sent to the registered email.
             </p>
 
-            <form method="POST" action="<?= h(BASE_URL . '/app/register/index.php') ?>">
+            <form method="POST" action="<?= h(BASE_URL . '/app/register') ?>">
               <?= csrfField() ?>
               <input type="hidden" name="action" value="submit">
 
@@ -289,7 +289,7 @@ $isDone   = ($step === 'done');
                 <button type="submit" class="btn btn-primary px-4">
                   Continue to Verify <i class="bi bi-arrow-right ms-2"></i>
                 </button>
-                <a href="<?= h(BASE_URL . '/app/auth/login.php') ?>" class="btn btn-outline-secondary">Cancel</a>
+                <a href="<?= h(BASE_URL . '/app/auth/login') ?>" class="btn btn-outline-secondary">Cancel</a>
               </div>
             </form>
           </div>
@@ -339,14 +339,14 @@ $isDone   = ($step === 'done');
             </div>
 
             <div class="d-flex gap-2 mt-3">
-              <form method="POST" action="<?= h(BASE_URL . '/app/register/index.php?step=verify') ?>">
+              <form method="POST" action="<?= h(BASE_URL . '/app/register?step=verify') ?>">
                 <?= csrfField() ?>
                 <input type="hidden" name="action" value="confirm">
                 <button type="submit" class="btn btn-success px-4">
                   <i class="bi bi-check-lg me-2"></i>Confirm &amp; Create Institution
                 </button>
               </form>
-              <a href="<?= h(BASE_URL . '/app/register/index.php') ?>" class="btn btn-outline-secondary">
+              <a href="<?= h(BASE_URL . '/app/register') ?>" class="btn btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>Edit Details
               </a>
             </div>
@@ -409,7 +409,7 @@ $isDone   = ($step === 'done');
               </div>
             </div>
 
-            <a href="<?= h(BASE_URL . '/app/auth/login.php') ?>" class="btn btn-primary mt-4 px-4">
+            <a href="<?= h(BASE_URL . '/app/auth/login') ?>" class="btn btn-primary mt-4 px-4">
               <i class="bi bi-box-arrow-in-right me-2"></i>Proceed to Login
             </a>
           </div>
