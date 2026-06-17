@@ -2,6 +2,10 @@
 app/config/db.local.php
 app/config/mail.local.php
 
+# Composer dependencies – install on the server via composer install
+vendor/
+composer.lock
+
 # Uploaded files
 app/uploads/logos/*
 app/uploads/photos/*

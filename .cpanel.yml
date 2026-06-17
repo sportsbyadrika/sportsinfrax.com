@@ -8,3 +8,5 @@ deployment:
     # After first deploy, edit these files on the server with real credentials.
     - test -f $DEPLOYPATH/app/config/db.local.php   || /bin/cp $DEPLOYPATH/app/config/db.local.example.php   $DEPLOYPATH/app/config/db.local.php
     - test -f $DEPLOYPATH/app/config/mail.local.php  || /bin/cp $DEPLOYPATH/app/config/mail.local.example.php  $DEPLOYPATH/app/config/mail.local.php
+    # Install PHP dependencies (skips if vendor/ is already up to date)
+    - cd $DEPLOYPATH && /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1 || true

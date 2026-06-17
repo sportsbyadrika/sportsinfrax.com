@@ -35,6 +35,28 @@ if ($instId) {
     $newToday = (int)$nStmt->fetchColumn();
 }
 
+// My pending approvals (submissions by this staff member awaiting review)
+$myPendingApprovals = [];
+if ($instId) {
+    $myPaStmt = $db->prepare(
+        "SELECT ar.id, ar.entity_type, ar.entity_id, ar.created_at,
+                mp.amount, mp.payment_date, mp.payment_mode,
+                ms.plan_name, m.first_name, m.last_name, m.id AS member_id
+         FROM approval_requests ar
+         LEFT JOIN membership_payments mp
+               ON mp.id = ar.entity_id AND ar.entity_type = 'membership_payment'
+         LEFT JOIN memberships ms ON ms.id = mp.membership_id
+         LEFT JOIN members m ON m.id = ms.member_id
+         WHERE ar.institution_id = ? AND ar.requested_by = ? AND ar.status = 'pending'
+         ORDER BY ar.created_at DESC LIMIT 5"
+    );
+    $myPaStmt->execute([$instId, authId()]);
+    $myPendingApprovals = $myPaStmt->fetchAll();
+}
+
+// Recent conversations for this institution
+$recentConvs = $instId ? getConversations($instId, 5) : [];
+
 // Expiring soon members
 $expMembers = [];
 if ($instId) {
@@ -207,5 +229,99 @@ require_once APP_ROOT . '/includes/header.php';
     </div>
   </div>
 </div>
+
+<?php if ($inst && $inst['status'] === 'active'): ?>
+<div class="row g-4 mt-0">
+
+  <!-- My Pending Approvals Widget -->
+  <?php if ($myPendingApprovals): ?>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>
+          <i class="bi bi-hourglass-split me-2 text-warning"></i>My Pending Approvals
+          <span class="badge bg-warning text-dark ms-1"><?= count($myPendingApprovals) ?></span>
+        </span>
+        <a href="<?= h(BASE_URL . '/app/approval') ?>" class="btn btn-sm btn-outline-secondary">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          <?php foreach ($myPendingApprovals as $ap): ?>
+          <li class="list-group-item px-3 py-2 small">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div class="flex-grow-1">
+                <div class="fw-600">
+                  <?php if ($ap['first_name']): ?>
+                    <?= h($ap['first_name'] . ' ' . $ap['last_name']) ?>
+                    <span class="text-muted fw-normal">— <?= h($ap['plan_name'] ?? '—') ?></span>
+                  <?php else: ?>
+                    <?= h(ucfirst(str_replace('_', ' ', $ap['entity_type']))) ?>
+                  <?php endif; ?>
+                </div>
+                <?php if ($ap['amount']): ?>
+                <div class="text-muted">
+                  ₹<?= number_format($ap['amount'], 2) ?>
+                  · <?= fmtDate($ap['payment_date'], 'd M Y') ?>
+                </div>
+                <?php endif; ?>
+                <div class="text-muted" style="font-size:.7rem;">
+                  Submitted <?= fmtDate($ap['created_at'], 'd M Y') ?>
+                </div>
+              </div>
+              <span class="badge bg-warning text-dark flex-shrink-0">Pending</span>
+            </div>
+          </li>
+          <?php endforeach; ?>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
+
+  <!-- Recent Conversations Widget -->
+  <div class="col-lg-<?= $myPendingApprovals ? '6' : '12' ?>">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-chat-dots me-2 text-primary"></i>Recent Messages</span>
+        <a href="<?= h(BASE_URL . '/app/messages') ?>" class="btn btn-sm btn-outline-primary">All Messages</a>
+      </div>
+      <div class="card-body p-0">
+        <?php if ($recentConvs): ?>
+        <ul class="list-group list-group-flush">
+          <?php foreach ($recentConvs as $cv): ?>
+          <li class="list-group-item px-3 py-2">
+            <a href="<?= h(BASE_URL . '/app/messages/conversation?id=' . $cv['id']) ?>"
+               class="text-decoration-none d-flex align-items-start gap-2">
+              <div class="avatar-circle flex-shrink-0" style="width:32px;height:32px;font-size:.75rem;border-radius:8px;">
+                <?= mb_strtoupper(mb_substr($cv['first_name'], 0, 1)) ?>
+              </div>
+              <div class="flex-grow-1 min-w-0 small">
+                <div class="fw-600 text-truncate"><?= h($cv['first_name'] . ' ' . $cv['last_name']) ?></div>
+                <div class="text-muted text-truncate" style="font-size:.8rem;">
+                  <?= h(mb_strimwidth($cv['last_body'] ?? '(no messages)', 0, 70, '…')) ?>
+                </div>
+                <div class="text-muted" style="font-size:.7rem;">
+                  <?= $cv['last_msg_time'] ? fmtDate($cv['last_msg_time'], 'd M, H:i') : fmtDate($cv['created_at'], 'd M') ?>
+                </div>
+              </div>
+            </a>
+          </li>
+          <?php endforeach; ?>
+        </ul>
+        <?php else: ?>
+        <div class="empty-state py-4">
+          <i class="bi bi-chat-square"></i>
+          <h6>No conversations yet</h6>
+          <a href="<?= h(BASE_URL . '/app/messages') ?>" class="btn btn-sm btn-primary mt-2">
+            Start a Conversation
+          </a>
+        </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+
+</div>
+<?php endif; // active institution ?>
 
 <?php require_once APP_ROOT . '/includes/footer.php'; ?>

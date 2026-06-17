@@ -16,7 +16,6 @@ $instId   = authInstId();
 $activeItems = getMenuItems('reports', $category, $role, $userId, $instId);
 
 $comingSoon = [
-    ['bi-people-fill',                  'linear-gradient(135deg,#0b5ed7,#1e78ff)', 'Member Report',       'Active, inactive and new member statistics with filters.',          false],
     ['bi-card-checklist',               'linear-gradient(135deg,#059669,#10b981)', 'Membership Report',   'Current, expired and expiring membership summaries.',               false],
     ['bi-cash-stack',                   'linear-gradient(135deg,#d97706,#f59e0b)', 'Financial Report',    'Revenue, collection and outstanding fee reports.',                  false],
     ['bi-calendar-check-fill',          'linear-gradient(135deg,#6f42c1,#9c68f0)', 'Attendance Report',   'Daily and monthly attendance records per batch.',                   false],
@@ -41,6 +40,15 @@ require_once APP_ROOT . '/includes/header.php';
 <?php foreach ($activeItems as $item): ?>
   <?= renderMenuHubCard($item) ?>
 <?php endforeach; ?>
+
+<?= renderMenuHubCard([
+    'icon'          => 'bi-people-fill',
+    'gradient'      => 'linear-gradient(135deg,#0b5ed7,#1e78ff)',
+    'label'         => 'Member Report',
+    'description'   => 'Active, inactive and new member statistics with filters. Export to Excel or print.',
+    'route'         => '/app/reports/members',
+    'required_role' => 'any',
+]) ?>
 
 <?php foreach ($comingSoon as [$icon, $gradient, $title, $desc, $adminOnly]): ?>
   <?php if ($adminOnly && !$isAdmin) continue; ?>
