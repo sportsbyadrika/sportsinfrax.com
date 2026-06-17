@@ -1,0 +1,11 @@
+{
+    "require": {
+        "phpoffice/phpspreadsheet": "^5.8"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "platform": {
+            "php": "8.1"
+        }
+    }
+}

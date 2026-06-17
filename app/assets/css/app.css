@@ -630,3 +630,30 @@ body {
 }
 .section-header-strip h4 { margin: 0; font-weight: 700; }
 .section-header-strip p  { margin: 0; opacity: .75; font-size: .88rem; }
+
+/* ── Print layout (app pages only, not standalone print reports) ── */
+@media print {
+  .app-navbar,
+  .page-breadcrumb,
+  .btn,
+  .alert-dismissible .btn-close,
+  form,
+  .dropdown { display: none !important; }
+
+  body { background: #fff !important; color: #000 !important; }
+  .main-content { padding: 0 !important; margin: 0 !important; }
+
+  .card { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+  .card-header { background: #0b1f3a !important; color: #fff !important;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .stat-card { break-inside: avoid; }
+  .stat-card.primary,
+  .stat-card.success,
+  .stat-card.warning,
+  .stat-card.purple { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  table { font-size: 9pt !important; }
+  thead { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  a[href]::after { content: none !important; }
+}
