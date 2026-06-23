@@ -111,15 +111,15 @@ if ($selectedYearId) {
     $secStmt = $db->prepare(
         "SELECT sec.*,
                 cls.name  AS class_name, cls.numeric_order,
-                div.name  AS division_name,
+                dv.name   AS division_name,
                 u.full_name AS teacher_name
          FROM sections sec
          JOIN classes   cls ON cls.id = sec.class_id
-         JOIN divisions div ON div.id = sec.division_id
+         JOIN divisions dv  ON dv.id  = sec.division_id
          LEFT JOIN staff  st ON st.id = sec.class_teacher_id
          LEFT JOIN users   u ON  u.id = st.user_id
          WHERE sec.institution_id = ? AND sec.academic_year_id = ?
-         ORDER BY cls.numeric_order, cls.name, div.name"
+         ORDER BY cls.numeric_order, cls.name, dv.name"
     );
     $secStmt->execute([$instId, $selectedYearId]);
     $sections = $secStmt->fetchAll();
