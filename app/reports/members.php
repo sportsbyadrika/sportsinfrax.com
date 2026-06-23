@@ -42,7 +42,7 @@ if ($fDateFrom !== '')       { $where[] = 'DATE(m.created_at) >= ?'; $params[] =
 if ($fDateTo !== '')         { $where[] = 'DATE(m.created_at) <= ?'; $params[] = $fDateTo; }
 
 $stmt = $db->prepare(
-    "SELECT m.member_code, m.first_name, m.last_name, m.gender, m.dob,
+    "SELECT m.member_code, m.first_name, m.last_name, m.gender, m.date_of_birth,
             m.mobile, m.email, m.sport_category, m.is_active, m.created_at,
             ms.plan_name, ms.end_date, ms.payment_status
      FROM members m
@@ -62,7 +62,7 @@ $cols = [
     ['key' => 'last_name',      'label' => 'Last Name',  'width' => 18],
     ['key' => 'gender',         'label' => 'Gender',     'width' => 10,
      'format' => fn($v, $r) => ucfirst($v)],
-    ['key' => 'dob',            'label' => 'DOB',        'width' => 14, 'format' => 'date'],
+    ['key' => 'date_of_birth',  'label' => 'DOB',        'width' => 14, 'format' => 'date'],
     ['key' => 'mobile',         'label' => 'Mobile',     'width' => 15],
     ['key' => 'email',          'label' => 'Email',      'width' => 28],
     ['key' => 'sport_category', 'label' => 'Sport',      'width' => 18],

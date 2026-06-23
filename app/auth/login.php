@@ -12,15 +12,17 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verifyCsrf();
 
-    $email    = trim($_POST['email']    ?? '');
+    $login    = trim($_POST['login']    ?? '');
     $password = trim($_POST['password'] ?? '');
 
-    if (!$email || !$password) {
-        $error = 'Please enter your email and password.';
+    if (!$login || !$password) {
+        $error = 'Please enter your email (or username) and password.';
     } else {
         $db   = getDB();
-        $stmt = $db->prepare("SELECT * FROM users WHERE email = ? AND is_active = 1 LIMIT 1");
-        $stmt->execute([$email]);
+        $stmt = $db->prepare(
+            "SELECT * FROM users WHERE (email = ? OR username = ?) AND is_active = 1 LIMIT 1"
+        );
+        $stmt->execute([$login, $login]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user['password'])) {
@@ -29,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: ' . dashboardUrl());
             exit;
         } else {
-            $error = 'Invalid email or password. Please try again.';
+            $error = 'Invalid credentials. Please try again.';
         }
     }
 }
@@ -71,12 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?= csrfField() ?>
 
         <div class="mb-3">
-          <label class="form-label" for="email">Email Address</label>
+          <label class="form-label" for="login">Email or Username</label>
           <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-            <input type="email" class="form-control" id="email" name="email"
-                   value="<?= h($_POST['email'] ?? '') ?>"
-                   placeholder="you@institution.com" required autofocus>
+            <span class="input-group-text"><i class="bi bi-person-fill"></i></span>
+            <input type="text" class="form-control" id="login" name="login"
+                   value="<?= h($_POST['login'] ?? '') ?>"
+                   placeholder="email@domain.com or username"
+                   autocomplete="username" required autofocus>
           </div>
         </div>
 

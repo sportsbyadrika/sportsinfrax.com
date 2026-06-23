@@ -574,10 +574,13 @@ HTML;
     return sendMail($to, $subject, $body);
 }
 
-function mailStaffWelcome(string $to, string $name, string $institutionName, string $password): bool
+function mailStaffWelcome(string $to, string $name, string $institutionName, string $password, ?string $username = null): bool
 {
-    $subject = APP_NAME . ' – Your Staff Account';
-    $loginUrl = BASE_URL . '/app/auth/login.php';
+    $subject      = APP_NAME . ' – Your Staff Account';
+    $loginUrl     = BASE_URL . '/app/auth/login';
+    $usernameRow  = $username
+        ? "<p style=\"margin:4px 0;\"><strong>Username:</strong> <code style=\"font-size:15px;\">{$username}</code> <span style=\"font-size:11px;color:#6b7280;\">(can also login with email)</span></p>"
+        : '';
     $body = <<<HTML
 <!DOCTYPE html><html><head><meta charset="UTF-8"></head>
 <body style="font-family:Segoe UI,Arial,sans-serif;color:#1f2937;background:#f8fbff;padding:24px;">
@@ -589,6 +592,7 @@ function mailStaffWelcome(string $to, string $name, string $institutionName, str
     <p>A staff account has been created for you at <strong>{$institutionName}</strong> on SportsInfraX.</p>
     <div style="background:#eef4ff;border-left:4px solid #0b5ed7;padding:16px;border-radius:8px;margin:16px 0;">
       <p style="margin:4px 0;"><strong>Email:</strong> {$to}</p>
+      {$usernameRow}
       <p style="margin:4px 0;"><strong>Password:</strong> <code style="font-size:15px;">{$password}</code></p>
     </div>
     <div style="text-align:center;margin:28px 0;">
