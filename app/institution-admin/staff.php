@@ -126,6 +126,10 @@ require_once APP_ROOT . '/includes/header.php';
           </td>
           <td>
             <div class="d-flex gap-1">
+              <a href="<?= h(BASE_URL . '/app/institution-admin/staff-permissions?staff_id=' . $s['id']) ?>"
+                 class="btn btn-sm btn-outline-secondary btn-icon" title="Permissions" data-bs-toggle="tooltip">
+                <i class="bi bi-shield-lock"></i>
+              </a>
               <a href="<?= h(BASE_URL . '/app/institution-admin/staff-add?id=' . $s['id']) ?>"
                  class="btn btn-sm btn-outline-primary btn-icon" title="Edit" data-bs-toggle="tooltip">
                 <i class="bi bi-pencil"></i>

@@ -726,6 +726,71 @@ function hasStaffPermission(int $userId, int $instId, string $moduleAction, stri
 }
 
 /**
+ * Returns the effective scope the currently-logged-in user has for a module:
+ * 'all', 'own_class', or 'none'. Institution admins always return 'all'.
+ */
+function getModuleScope(string $module): string
+{
+    if (!isStaff()) return isLoggedIn() ? 'all' : 'none';
+    $userId = authId();
+    $instId = authInstId();
+    if (!$userId || !$instId) return 'none';
+    $perms = _staffPermSet($userId, $instId);
+    if (!isset($perms["{$module}.manage"])) return 'none';
+    $scopes = $perms["{$module}.manage"];
+    if (in_array('all', $scopes, true))       return 'all';
+    if (in_array('own_class', $scopes, true)) return 'own_class';
+    return 'none';
+}
+
+/**
+ * Returns the staff.id for the currently logged-in staff user, or null.
+ * Uses a static cache to avoid repeated DB hits.
+ */
+function authStaffId(): ?int
+{
+    static $id = false;
+    if ($id === false) {
+        $userId = authId();
+        $instId = authInstId();
+        if (!$userId || !$instId) { $id = null; return null; }
+        try {
+            $stmt = getDB()->prepare(
+                "SELECT id FROM staff WHERE user_id = ? AND institution_id = ? LIMIT 1"
+            );
+            $stmt->execute([$userId, $instId]);
+            $val = $stmt->fetchColumn();
+            $id  = $val !== false ? (int)$val : null;
+        } catch (Exception $e) {
+            $id = null;
+        }
+    }
+    return $id;
+}
+
+/**
+ * Returns section IDs where the given staff member is the assigned class teacher.
+ */
+function getTeacherSectionIds(int $staffId, int $instId): array
+{
+    static $cache = [];
+    $key = "{$staffId}:{$instId}";
+    if (!isset($cache[$key])) {
+        try {
+            $stmt = getDB()->prepare(
+                "SELECT id FROM sections
+                  WHERE class_teacher_id = ? AND institution_id = ? AND is_active = 1"
+            );
+            $stmt->execute([$staffId, $instId]);
+            $cache[$key] = array_column($stmt->fetchAll(), 'id');
+        } catch (Exception $e) {
+            $cache[$key] = [];
+        }
+    }
+    return $cache[$key];
+}
+
+/**
  * Renders a single hub-page card from a menu_items row or a
  * coming-soon descriptor array with the same keys.
  *
