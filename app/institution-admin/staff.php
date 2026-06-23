@@ -97,9 +97,15 @@ require_once APP_ROOT . '/includes/header.php';
           <td class="text-muted small"><?= $offset + $i + 1 ?></td>
           <td>
             <div class="d-flex align-items-center gap-2">
+              <?php if (!empty($s['passport_photo'])): ?>
+              <img src="<?= h(PHOTO_URL . '/' . $s['passport_photo']) ?>"
+                   alt="<?= h($s['full_name']) ?>"
+                   style="width:32px;height:32px;border-radius:6px;object-fit:cover;flex-shrink:0;">
+              <?php else: ?>
               <div class="avatar-circle" style="width:32px;height:32px;font-size:.75rem;border-radius:6px;">
                 <?= mb_strtoupper(mb_substr($s['full_name'], 0, 1)) ?>
               </div>
+              <?php endif; ?>
               <div>
                 <div class="fw-600 small"><?= h($s['full_name']) ?></div>
                 <div class="text-muted" style="font-size:.72rem;"><?= h($s['email']) ?></div>
