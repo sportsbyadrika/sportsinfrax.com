@@ -145,9 +145,9 @@ require_once APP_ROOT . '/includes/header.php';
       </div>
       <div class="card-body p-0">
         <?php if ($classList): ?>
-        <div class="table-responsive">
-          <table class="table">
-            <thead>
+        <div class="table-responsive" style="max-height:420px;overflow-y:auto;">
+          <table class="table table-sm">
+            <thead class="sticky-top table-light">
               <tr><th>Order</th><th>Class Name</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
