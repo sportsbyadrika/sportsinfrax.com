@@ -505,7 +505,7 @@ if ($isSchool) {
                   <select class="form-select form-select-sm"
                           name="att[<?= $eid ?>][leave_type]"
                           id="leave-type-<?= $eid ?>"
-                          style="width:100px;">
+                          style="width:200px;">
                     <option value="">Type…</option>
                     <option value="sick"   <?= $curLeave === 'sick'    ? 'selected' : '' ?>>Sick</option>
                     <option value="casual" <?= $curLeave === 'casual'  ? 'selected' : '' ?>>Casual</option>
@@ -516,7 +516,8 @@ if ($isSchool) {
                        name="att[<?= $eid ?>][remarks]"
                        value="<?= h($curRemark) ?>"
                        maxlength="300"
-                       placeholder="Remarks (optional)">
+                       placeholder="Remarks (optional)"
+                       style="width:75px;min-width:0;">
               </div>
             </td>
           </tr>
