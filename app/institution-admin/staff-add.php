@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Validation
     if (!$fullName) {
         $error = 'Full name is required.';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    } elseif (!$editId && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'A valid email address is required.';
     } elseif (!preg_match('/^[6-9]\d{9}$/', $mobile)) {
         $error = 'A valid 10-digit mobile number is required.';
