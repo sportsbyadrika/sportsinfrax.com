@@ -124,11 +124,27 @@ function canDo(string $module, string $action, string $scope = 'all'): bool
 /**
  * Returns the context-appropriate label for "Member/Members".
  * School institutions use "Student/Students"; all others use "Member/Members".
- * Reads from $_SESSION['inst_category'] set at login — no extra DB hit.
+ * Reads $_SESSION['inst_category']; if missing (pre-login or old session),
+ * does a one-time DB lookup and caches the result in the session.
  */
 function memberLabel(bool $plural = true): string
 {
-    $isSchool = (($_SESSION['inst_category'] ?? 'general') === 'school');
+    if (!isset($_SESSION['inst_category'])) {
+        $_SESSION['inst_category'] = 'general';
+        $instId = authInstId();
+        if ($instId) {
+            try {
+                $stmt = getDB()->prepare(
+                    "SELECT it.category FROM institutions i
+                     JOIN institution_types it ON it.value = i.institution_type
+                     WHERE i.id = ? LIMIT 1"
+                );
+                $stmt->execute([$instId]);
+                $_SESSION['inst_category'] = $stmt->fetchColumn() ?: 'general';
+            } catch (Exception $e) { /* leave as 'general' */ }
+        }
+    }
+    $isSchool = ($_SESSION['inst_category'] === 'school');
     return $isSchool
         ? ($plural ? 'Students' : 'Student')
         : ($plural ? 'Members'  : 'Member');
