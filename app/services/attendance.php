@@ -434,7 +434,7 @@ if ($isSchool) {
             <td class="text-muted small"><?= $i + 1 ?></td>
             <td>
               <?php if (!empty($ent['passport_photo'])): ?>
-              <img src="<?= h(BASE_URL . '/app/serve/file.php?f=' . urlencode($ent['passport_photo'])) ?>"
+              <img src="<?= h(PHOTO_URL . '/' . $ent['passport_photo']) ?>"
                    alt=""
                    style="width:36px;height:36px;border-radius:6px;object-fit:cover;">
               <?php else: ?>
@@ -499,23 +499,25 @@ if ($isSchool) {
             </td>
             <!-- Leave type + Remarks -->
             <td>
-              <div class="leave-type-wrap"
-                   id="leave-wrap-<?= $eid ?>"
-                   style="<?= $curStatus !== 'leave' ? 'display:none;' : '' ?>">
-                <select class="form-select form-select-sm mb-1"
-                        name="att[<?= $eid ?>][leave_type]"
-                        id="leave-type-<?= $eid ?>">
-                  <option value="">Type…</option>
-                  <option value="sick"   <?= $curLeave === 'sick'    ? 'selected' : '' ?>>Sick</option>
-                  <option value="casual" <?= $curLeave === 'casual'  ? 'selected' : '' ?>>Casual</option>
-                  <option value="other"  <?= $curLeave === 'other'   ? 'selected' : '' ?>>Other</option>
-                </select>
+              <div class="d-flex gap-2 align-items-center">
+                <div id="leave-wrap-<?= $eid ?>"
+                     style="flex-shrink:0;<?= $curStatus !== 'leave' ? 'display:none;' : '' ?>">
+                  <select class="form-select form-select-sm"
+                          name="att[<?= $eid ?>][leave_type]"
+                          id="leave-type-<?= $eid ?>"
+                          style="width:100px;">
+                    <option value="">Type…</option>
+                    <option value="sick"   <?= $curLeave === 'sick'    ? 'selected' : '' ?>>Sick</option>
+                    <option value="casual" <?= $curLeave === 'casual'  ? 'selected' : '' ?>>Casual</option>
+                    <option value="other"  <?= $curLeave === 'other'   ? 'selected' : '' ?>>Other</option>
+                  </select>
+                </div>
+                <input type="text" class="form-control form-control-sm"
+                       name="att[<?= $eid ?>][remarks]"
+                       value="<?= h($curRemark) ?>"
+                       maxlength="300"
+                       placeholder="Remarks (optional)">
               </div>
-              <input type="text" class="form-control form-control-sm"
-                     name="att[<?= $eid ?>][remarks]"
-                     value="<?= h($curRemark) ?>"
-                     maxlength="300"
-                     placeholder="Remarks (optional)">
             </td>
           </tr>
           <?php endforeach; ?>
