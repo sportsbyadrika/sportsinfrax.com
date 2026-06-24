@@ -79,7 +79,7 @@ require_once APP_ROOT . '/includes/header.php';
       'gradient'      => 'linear-gradient(135deg,#0b5ed7,#1e78ff)',
       'label'         => 'Student Admission',
       'description'   => 'Register a new student with full details and documents.',
-      'route'         => BASE_URL . '/app/services/students-add',
+      'route'         => '/app/services/students-add',
       'required_role' => 'any',
   ]) ?>
   <?= renderMenuHubCard([
@@ -87,7 +87,7 @@ require_once APP_ROOT . '/includes/header.php';
       'gradient'      => 'linear-gradient(135deg,#059669,#10b981)',
       'label'         => 'Student List',
       'description'   => 'View, search and manage all enrolled students.',
-      'route'         => BASE_URL . '/app/services/students',
+      'route'         => '/app/services/students',
       'required_role' => 'any',
   ]) ?>
 <?php endif; ?>
