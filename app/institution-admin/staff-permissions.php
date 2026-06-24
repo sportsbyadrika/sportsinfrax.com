@@ -45,8 +45,10 @@ $currentPerms = array_column($permStmt->fetchAll(), 'scope', 'module');
 $modules = [];
 if ($isSchool) {
     $modules['students']   = ['label' => 'Students',   'icon' => 'bi-mortarboard-fill',   'desc' => 'Add, view and edit student records.',          'ready' => true];
-    $modules['attendance'] = ['label' => 'Attendance', 'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view attendance records.',             'ready' => false];
+    $modules['attendance'] = ['label' => 'Attendance', 'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view student attendance records.',    'ready' => true];
     $modules['subjects']   = ['label' => 'Subjects',   'icon' => 'bi-book-fill',           'desc' => 'Manage subject master and assignments.',        'ready' => false];
+} else {
+    $modules['attendance'] = ['label' => 'Attendance', 'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view member attendance records.',     'ready' => true];
 }
 
 $levels = [
