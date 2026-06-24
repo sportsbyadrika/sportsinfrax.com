@@ -21,7 +21,7 @@
 <body>
 <?php require_once APP_ROOT . '/includes/navbar.php'; ?>
 <main class="app-main">
-  <div class="container-xl py-4">
+  <div class="container-fluid py-4">
     <!-- Breadcrumb / Page Header -->
     <?php if (!empty($pageTitle)): ?>
     <div class="page-header mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
