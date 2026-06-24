@@ -517,7 +517,7 @@ if ($isSchool) {
                        value="<?= h($curRemark) ?>"
                        maxlength="300"
                        placeholder="Remarks (optional)"
-                       style="width:75px;min-width:0;">
+                       style="flex:1 1 0;min-width:0;">
               </div>
             </td>
           </tr>
