@@ -44,7 +44,7 @@ require_once APP_ROOT . '/includes/header.php';
 <?= renderMenuHubCard([
     'icon'          => 'bi-people-fill',
     'gradient'      => 'linear-gradient(135deg,#0b5ed7,#1e78ff)',
-    'label'         => 'Member Report',
+    'label'         => memberLabel(false) . ' Report',
     'description'   => 'Active, inactive and new member statistics with filters. Export to Excel or print.',
     'route'         => '/app/reports/members',
     'required_role' => 'any',

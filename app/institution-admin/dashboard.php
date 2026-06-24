@@ -120,7 +120,7 @@ require_once APP_ROOT . '/includes/header.php';
         <div class="stat-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-people-fill"></i></div>
       </div>
       <div class="stat-value"><?= $memberCount ?></div>
-      <div class="stat-label mt-1">Total Members</div>
+      <div class="stat-label mt-1">Total <?= memberLabel() ?></div>
       <i class="bi bi-people-fill stat-bg"></i>
     </div>
   </div>
@@ -218,7 +218,7 @@ require_once APP_ROOT . '/includes/header.php';
           <table class="table">
             <thead>
               <tr>
-                <th>Member</th>
+                <th><?= memberLabel(false) ?></th>
                 <th>Code</th>
                 <th>Sport</th>
                 <th>Membership</th>

@@ -65,10 +65,10 @@ $sportStmt = $db->prepare("SELECT DISTINCT sport_category FROM members WHERE ins
 $sportStmt->execute([$instId]);
 $sports = $sportStmt->fetchAll(PDO::FETCH_COLUMN);
 
-$pageTitle   = 'Members';
-$breadcrumbs = ['Dashboard' => dashboardUrl(), 'Members' => BASE_URL . '/app/members', 'Member List' => ''];
+$pageTitle   = memberLabel();
+$breadcrumbs = ['Dashboard' => dashboardUrl(), memberLabel() => BASE_URL . '/app/members', memberLabel(false) . ' List' => ''];
 $pageAction  = '<a href="' . h(BASE_URL . '/app/members/add') . '" class="btn btn-primary btn-sm">
-                  <i class="bi bi-plus-circle me-1"></i>Add Member
+                  <i class="bi bi-plus-circle me-1"></i>Add ' . memberLabel(false) . '
                 </a>';
 require_once APP_ROOT . '/includes/header.php';
 ?>
@@ -112,7 +112,7 @@ require_once APP_ROOT . '/includes/header.php';
 <div class="card table-card">
   <div class="card-header d-flex justify-content-between align-items-center">
     <span>
-      <i class="bi bi-people me-2 text-primary"></i>Members
+      <i class="bi bi-people me-2 text-primary"></i><?= memberLabel() ?>
       <span class="badge bg-secondary ms-1"><?= $total ?></span>
     </span>
     <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-sm btn-primary d-md-none"><i class="bi bi-plus"></i></a>
@@ -122,8 +122,8 @@ require_once APP_ROOT . '/includes/header.php';
       <thead>
         <tr>
           <th>#</th>
-          <th>Member</th>
-          <th>Member Code</th>
+          <th><?= memberLabel(false) ?></th>
+          <th><?= memberLabel(false) ?> Code</th>
           <th>Sport</th>
           <th>Mobile</th>
           <th>Membership</th>
@@ -195,9 +195,9 @@ require_once APP_ROOT . '/includes/header.php';
         <tr><td colspan="8">
           <div class="empty-state py-4">
             <i class="bi bi-people"></i>
-            <h6>No members found</h6>
+            <h6>No <?= memberLabel() ?> found</h6>
             <p class="small">Try adjusting your filters or add a new member.</p>
-            <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary btn-sm">Add Member</a>
+            <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary btn-sm">Add <?= memberLabel(false) ?></a>
           </div>
         </td></tr>
         <?php endif; ?>

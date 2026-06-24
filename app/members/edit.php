@@ -107,10 +107,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $m           = $member;
 $useCropper  = true;
-$pageTitle   = 'Edit Member – ' . h($member['first_name'] . ' ' . $member['last_name']);
+$pageTitle   = 'Edit ' . memberLabel(false) . ' – ' . h($member['first_name'] . ' ' . $member['last_name']);
 $breadcrumbs = [
-    'Dashboard' => dashboardUrl(),
-    'Members'   => BASE_URL . '/app/members/list',
+    'Dashboard'   => dashboardUrl(),
+    memberLabel() => BASE_URL . '/app/members/list',
     $member['first_name'] . ' ' . $member['last_name'] => BASE_URL . '/app/members/view?id=' . $id,
     'Edit'      => '',
 ];

@@ -92,11 +92,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $useCropper  = true;
-$pageTitle   = 'Add New Member';
+$pageTitle   = 'Add New ' . memberLabel(false);
 $breadcrumbs = [
-    'Dashboard' => dashboardUrl(),
-    'Members'   => BASE_URL . '/app/members/list',
-    'Add Member'=> '',
+    'Dashboard'              => dashboardUrl(),
+    memberLabel()            => BASE_URL . '/app/members/list',
+    'Add ' . memberLabel(false) => '',
 ];
 require_once APP_ROOT . '/includes/header.php';
 ?>
@@ -301,7 +301,7 @@ require_once APP_ROOT . '/includes/header.php';
         </p>
         <div class="d-grid gap-2">
           <button type="submit" class="btn btn-primary">
-            <i class="bi bi-person-plus me-2"></i>Save Member
+            <i class="bi bi-person-plus me-2"></i>Save <?= memberLabel(false) ?>
           </button>
           <a href="<?= h(BASE_URL . '/app/members/list') ?>" class="btn btn-outline-secondary">Cancel</a>
         </div>
