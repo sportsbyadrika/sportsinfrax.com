@@ -15,24 +15,42 @@ if (!$inst || $inst['status'] !== 'active') {
     // Show limited view
 }
 
+$category = getInstitutionCategory($inst['institution_type'] ?? '');
+$isSchool  = ($category === 'school');
+
 // Stats
 $totalMembers = 0; $activeMs = 0; $expSoon = 0; $newToday = 0;
 if ($instId) {
-    $mStmt = $db->prepare("SELECT COUNT(*) FROM members WHERE institution_id = ? AND is_active = 1");
-    $mStmt->execute([$instId]);
-    $totalMembers = (int)$mStmt->fetchColumn();
+    if ($isSchool) {
+        $mStmt = $db->prepare("SELECT COUNT(*) FROM students WHERE institution_id = ?");
+        $mStmt->execute([$instId]);
+        $totalMembers = (int)$mStmt->fetchColumn();
 
-    $aStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms WHERE ms.institution_id = ? AND ms.end_date >= CURDATE()");
-    $aStmt->execute([$instId]);
-    $activeMs = (int)$aStmt->fetchColumn();
+        $aStmt = $db->prepare("SELECT COUNT(*) FROM students WHERE institution_id = ? AND is_active = 1");
+        $aStmt->execute([$instId]);
+        $activeMs = (int)$aStmt->fetchColumn();
 
-    $eStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms WHERE ms.institution_id = ? AND ms.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
-    $eStmt->execute([$instId]);
-    $expSoon = (int)$eStmt->fetchColumn();
+        // $expSoon = fee dues placeholder
+        $nStmt = $db->prepare("SELECT COUNT(*) FROM students WHERE institution_id = ? AND DATE(created_at) = CURDATE()");
+        $nStmt->execute([$instId]);
+        $newToday = (int)$nStmt->fetchColumn();
+    } else {
+        $mStmt = $db->prepare("SELECT COUNT(*) FROM members WHERE institution_id = ? AND is_active = 1");
+        $mStmt->execute([$instId]);
+        $totalMembers = (int)$mStmt->fetchColumn();
 
-    $nStmt = $db->prepare("SELECT COUNT(*) FROM members WHERE institution_id = ? AND DATE(created_at) = CURDATE()");
-    $nStmt->execute([$instId]);
-    $newToday = (int)$nStmt->fetchColumn();
+        $aStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms WHERE ms.institution_id = ? AND ms.end_date >= CURDATE()");
+        $aStmt->execute([$instId]);
+        $activeMs = (int)$aStmt->fetchColumn();
+
+        $eStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms WHERE ms.institution_id = ? AND ms.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
+        $eStmt->execute([$instId]);
+        $expSoon = (int)$eStmt->fetchColumn();
+
+        $nStmt = $db->prepare("SELECT COUNT(*) FROM members WHERE institution_id = ? AND DATE(created_at) = CURDATE()");
+        $nStmt->execute([$instId]);
+        $newToday = (int)$nStmt->fetchColumn();
+    }
 }
 
 // My pending approvals (submissions by this staff member awaiting review)
@@ -57,9 +75,9 @@ if ($instId) {
 // Recent conversations for this institution
 $recentConvs = $instId ? getConversations($instId, 5) : [];
 
-// Expiring soon members
+// Expiring soon members (non-school only)
 $expMembers = [];
-if ($instId) {
+if ($instId && !$isSchool) {
     $emStmt = $db->prepare(
         "SELECT m.first_name, m.last_name, m.mobile, m.member_code, m.id AS member_id,
                 ms.end_date, ms.plan_name
@@ -75,18 +93,32 @@ if ($instId) {
     $expMembers = $emStmt->fetchAll();
 }
 
-// Recent members
+// Recent members / students
 $recentMembers = [];
 if ($instId) {
-    $rmStmt = $db->prepare(
-        "SELECT m.*, ms.end_date, ms.payment_status
-         FROM members m
-         LEFT JOIN memberships ms ON ms.id = (
-             SELECT id FROM memberships WHERE member_id = m.id ORDER BY created_at DESC LIMIT 1
-         )
-         WHERE m.institution_id = ? AND m.is_active = 1
-         ORDER BY m.created_at DESC LIMIT 6"
-    );
+    if ($isSchool) {
+        $rmStmt = $db->prepare(
+            "SELECT s.id, s.first_name, s.last_name, s.passport_photo,
+                    s.admission_number AS member_code, s.is_active,
+                    cls.name AS class_name, dv.name AS division_name
+             FROM students s
+             LEFT JOIN sections sec ON sec.id = s.section_id
+             LEFT JOIN classes cls ON cls.id = sec.class_id
+             LEFT JOIN divisions dv ON dv.id = sec.division_id
+             WHERE s.institution_id = ? AND s.is_active = 1
+             ORDER BY s.created_at DESC LIMIT 6"
+        );
+    } else {
+        $rmStmt = $db->prepare(
+            "SELECT m.*, ms.end_date, ms.payment_status
+             FROM members m
+             LEFT JOIN memberships ms ON ms.id = (
+                 SELECT id FROM memberships WHERE member_id = m.id ORDER BY created_at DESC LIMIT 1
+             )
+             WHERE m.institution_id = ? AND m.is_active = 1
+             ORDER BY m.created_at DESC LIMIT 6"
+        );
+    }
     $rmStmt->execute([$instId]);
     $recentMembers = $rmStmt->fetchAll();
 }
@@ -102,8 +134,9 @@ require_once APP_ROOT . '/includes/header.php';
     <p class="text-muted small mb-0"><?= h($inst['institution_name'] ?? 'Your Institution') ?></p>
   </div>
   <?php if ($inst && $inst['status'] === 'active'): ?>
-  <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary">
-    <i class="bi bi-plus-circle me-2"></i>Add New <?= memberLabel(false) ?>
+  <a href="<?= h(BASE_URL . ($isSchool ? '/app/services/students-add' : '/app/members/add')) ?>"
+     class="btn btn-primary">
+    <i class="bi bi-plus-circle me-2"></i>Add <?= memberLabel(false) ?>
   </a>
   <?php endif; ?>
 </div>
@@ -120,18 +153,22 @@ require_once APP_ROOT . '/includes/header.php';
   </div>
   <div class="col-6 col-lg-3">
     <div class="stat-card success">
-      <div class="stat-icon mb-2" style="background:rgba(255,255,255,.2)"><i class="bi bi-card-checklist"></i></div>
+      <div class="stat-icon mb-2" style="background:rgba(255,255,255,.2)">
+        <i class="bi <?= $isSchool ? 'bi-mortarboard-fill' : 'bi-card-checklist' ?>"></i>
+      </div>
       <div class="stat-value"><?= $activeMs ?></div>
-      <div class="stat-label mt-1">Active Memberships</div>
-      <i class="bi bi-card-checklist stat-bg"></i>
+      <div class="stat-label mt-1"><?= $isSchool ? 'Active Students' : 'Active Memberships' ?></div>
+      <i class="bi <?= $isSchool ? 'bi-mortarboard-fill' : 'bi-card-checklist' ?> stat-bg"></i>
     </div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="stat-card warning">
-      <div class="stat-icon mb-2" style="background:rgba(255,255,255,.2)"><i class="bi bi-clock-history"></i></div>
+      <div class="stat-icon mb-2" style="background:rgba(255,255,255,.2)">
+        <i class="bi <?= $isSchool ? 'bi-cash-stack' : 'bi-clock-history' ?>"></i>
+      </div>
       <div class="stat-value"><?= $expSoon ?></div>
-      <div class="stat-label mt-1">Expiring (30 Days)</div>
-      <i class="bi bi-clock-history stat-bg"></i>
+      <div class="stat-label mt-1"><?= $isSchool ? 'Fee Dues' : 'Expiring (30 Days)' ?></div>
+      <i class="bi <?= $isSchool ? 'bi-cash-stack' : 'bi-clock-history' ?> stat-bg"></i>
     </div>
   </div>
   <div class="col-6 col-lg-3">
@@ -145,16 +182,26 @@ require_once APP_ROOT . '/includes/header.php';
 </div>
 
 <div class="row g-4">
-  <!-- Expiring Soon -->
+  <!-- Expiring Soon / Fee Dues -->
   <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
+        <?php if ($isSchool): ?>
+        <span><i class="bi bi-cash-stack me-2 text-warning"></i>Fee Dues</span>
+        <?php else: ?>
         <span><i class="bi bi-calendar-x me-2 text-warning"></i>Expiring Memberships</span>
         <a href="<?= h(BASE_URL . '/app/members/list?filter=expiring') ?>"
            class="btn btn-sm btn-outline-warning">View All</a>
+        <?php endif; ?>
       </div>
       <div class="card-body p-0">
-        <?php if ($expMembers): ?>
+        <?php if ($isSchool): ?>
+        <div class="empty-state py-4">
+          <i class="bi bi-cash-stack"></i>
+          <h6>Fee module coming soon</h6>
+          <p class="small">Student fee tracking will be available here.</p>
+        </div>
+        <?php elseif ($expMembers): ?>
         <div class="table-responsive">
           <table class="table">
             <thead><tr><th><?= memberLabel(false) ?></th><th>Plan</th><th>Expires</th></tr></thead>
@@ -184,27 +231,45 @@ require_once APP_ROOT . '/includes/header.php';
     </div>
   </div>
 
-  <!-- Recent Members -->
+  <!-- Recent Members / Students -->
   <div class="col-lg-6">
     <div class="card h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-person-lines-fill me-2 text-primary"></i>Recent Members</span>
-        <a href="<?= h(BASE_URL . '/app/members/list') ?>" class="btn btn-sm btn-outline-primary">All Members</a>
+        <span><i class="bi bi-person-lines-fill me-2 text-primary"></i><?= $isSchool ? 'Recent Students' : 'Recent Members' ?></span>
+        <a href="<?= h(BASE_URL . ($isSchool ? '/app/services/students' : '/app/members/list')) ?>"
+           class="btn btn-sm btn-outline-primary">All <?= memberLabel() ?></a>
       </div>
       <div class="card-body p-0">
         <?php if ($recentMembers): ?>
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th><?= memberLabel(false) ?></th><th>Code</th><th>Membership</th></tr></thead>
+            <thead>
+              <tr>
+                <th><?= memberLabel(false) ?></th>
+                <?php if ($isSchool): ?>
+                <th>Admission No</th><th>Section</th>
+                <?php else: ?>
+                <th>Code</th><th>Membership</th>
+                <?php endif; ?>
+              </tr>
+            </thead>
             <tbody>
               <?php foreach ($recentMembers as $m): ?>
               <tr>
                 <td>
+                  <?php if ($isSchool): ?>
+                  <div class="fw-600 small"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></div>
+                  <?php else: ?>
                   <a href="<?= h(BASE_URL . '/app/members/view?id=' . $m['id']) ?>" class="text-decoration-none">
                     <div class="fw-600 small"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></div>
                     <div class="text-muted" style="font-size:.72rem;"><?= h($m['sport_category'] ?? '—') ?></div>
                   </a>
+                  <?php endif; ?>
                 </td>
+                <?php if ($isSchool): ?>
+                <td class="small text-muted"><?= h($m['member_code'] ?? '—') ?></td>
+                <td class="small"><?= h(trim(($m['class_name'] ?? '') . ' ' . ($m['division_name'] ?? '')) ?: '—') ?></td>
+                <?php else: ?>
                 <td class="small text-muted"><?= h($m['member_code']) ?></td>
                 <td>
                   <?php if ($m['end_date']): ?>
@@ -213,6 +278,7 @@ require_once APP_ROOT . '/includes/header.php';
                     <span class="badge bg-secondary">—</span>
                   <?php endif; ?>
                 </td>
+                <?php endif; ?>
               </tr>
               <?php endforeach; ?>
             </tbody>
@@ -221,8 +287,9 @@ require_once APP_ROOT . '/includes/header.php';
         <?php else: ?>
         <div class="empty-state py-4">
           <i class="bi bi-people"></i>
-          <h6>No members yet</h6>
-          <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary btn-sm mt-2">Add <?= memberLabel(false) ?></a>
+          <h6>No <?= strtolower(memberLabel()) ?> yet</h6>
+          <a href="<?= h(BASE_URL . ($isSchool ? '/app/services/students-add' : '/app/members/add')) ?>"
+             class="btn btn-primary btn-sm mt-2">Add <?= memberLabel(false) ?></a>
         </div>
         <?php endif; ?>
       </div>

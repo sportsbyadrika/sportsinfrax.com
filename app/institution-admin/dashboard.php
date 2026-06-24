@@ -11,28 +11,40 @@ $inst = $stmt->fetch();
 
 if (!$inst) { setFlash('error', 'Institution not found.'); logoutUser(); header('Location: ' . BASE_URL . '/app/auth/login'); exit; }
 
+$category = getInstitutionCategory($inst['institution_type'] ?? '');
+$isSchool  = ($category === 'school');
+
 // Stats
 $staffCount  = (int)$db->prepare("SELECT COUNT(*) FROM staff WHERE institution_id = ? AND is_active = 1")->execute([$instId]) ? 0 : 0;
 $scStmt = $db->prepare("SELECT COUNT(*) FROM staff WHERE institution_id = ? AND is_active = 1");
 $scStmt->execute([$instId]);
 $staffCount = (int)$scStmt->fetchColumn();
 
-$mcStmt = $db->prepare("SELECT COUNT(*) FROM members WHERE institution_id = ? AND is_active = 1");
+$mcStmt = $db->prepare($isSchool
+    ? "SELECT COUNT(*) FROM students WHERE institution_id = ?"
+    : "SELECT COUNT(*) FROM members WHERE institution_id = ? AND is_active = 1");
 $mcStmt->execute([$instId]);
 $memberCount = (int)$mcStmt->fetchColumn();
 
-$activeMship = 0;
+$activeMship  = 0;
 $expiringSoon = 0;
 if ($inst['status'] === 'active') {
-    $msStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms JOIN members m ON m.id = ms.member_id
-                             WHERE ms.institution_id = ? AND ms.end_date >= CURDATE()");
-    $msStmt->execute([$instId]);
-    $activeMship = (int)$msStmt->fetchColumn();
+    if ($isSchool) {
+        $asStmt = $db->prepare("SELECT COUNT(*) FROM students WHERE institution_id = ? AND is_active = 1");
+        $asStmt->execute([$instId]);
+        $activeMship = (int)$asStmt->fetchColumn();
+        // $expiringSoon = fee dues — placeholder until fee module is built
+    } else {
+        $msStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms JOIN members m ON m.id = ms.member_id
+                                 WHERE ms.institution_id = ? AND ms.end_date >= CURDATE()");
+        $msStmt->execute([$instId]);
+        $activeMship = (int)$msStmt->fetchColumn();
 
-    $esStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms JOIN members m ON m.id = ms.member_id
-                             WHERE ms.institution_id = ? AND ms.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
-    $esStmt->execute([$instId]);
-    $expiringSoon = (int)$esStmt->fetchColumn();
+        $esStmt = $db->prepare("SELECT COUNT(*) FROM memberships ms JOIN members m ON m.id = ms.member_id
+                                 WHERE ms.institution_id = ? AND ms.end_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)");
+        $esStmt->execute([$instId]);
+        $expiringSoon = (int)$esStmt->fetchColumn();
+    }
 }
 
 // Pending approvals widget
@@ -64,14 +76,28 @@ if ($inst['status'] === 'active') {
     $recentConvs = getConversations($instId, 5);
 }
 
-// Recent members
+// Recent members / students
 $recentMembers = [];
 if ($inst['status'] === 'active') {
-    $rmStmt = $db->prepare("SELECT m.*, ms.end_date, ms.payment_status
-                             FROM members m
-                             LEFT JOIN memberships ms ON ms.id = (SELECT id FROM memberships WHERE member_id = m.id ORDER BY created_at DESC LIMIT 1)
-                             WHERE m.institution_id = ? AND m.is_active = 1
-                             ORDER BY m.created_at DESC LIMIT 5");
+    if ($isSchool) {
+        $rmStmt = $db->prepare(
+            "SELECT s.id, s.first_name, s.last_name, s.passport_photo,
+                    s.admission_number AS member_code, s.is_active,
+                    cls.name AS class_name, dv.name AS division_name
+             FROM students s
+             LEFT JOIN sections sec ON sec.id = s.section_id
+             LEFT JOIN classes cls ON cls.id = sec.class_id
+             LEFT JOIN divisions dv ON dv.id = sec.division_id
+             WHERE s.institution_id = ? AND s.is_active = 1
+             ORDER BY s.created_at DESC LIMIT 5"
+        );
+    } else {
+        $rmStmt = $db->prepare("SELECT m.*, ms.end_date, ms.payment_status
+                                 FROM members m
+                                 LEFT JOIN memberships ms ON ms.id = (SELECT id FROM memberships WHERE member_id = m.id ORDER BY created_at DESC LIMIT 1)
+                                 WHERE m.institution_id = ? AND m.is_active = 1
+                                 ORDER BY m.created_at DESC LIMIT 5");
+    }
     $rmStmt->execute([$instId]);
     $recentMembers = $rmStmt->fetchAll();
 }
@@ -127,21 +153,25 @@ require_once APP_ROOT . '/includes/header.php';
   <div class="col-6 col-lg-3">
     <div class="stat-card success">
       <div class="d-flex align-items-start justify-content-between mb-3">
-        <div class="stat-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-card-checklist"></i></div>
+        <div class="stat-icon" style="background:rgba(255,255,255,.2)">
+          <i class="bi <?= $isSchool ? 'bi-mortarboard-fill' : 'bi-card-checklist' ?>"></i>
+        </div>
       </div>
       <div class="stat-value"><?= $activeMship ?></div>
-      <div class="stat-label mt-1">Active Memberships</div>
-      <i class="bi bi-card-checklist stat-bg"></i>
+      <div class="stat-label mt-1"><?= $isSchool ? 'Active Students' : 'Active Memberships' ?></div>
+      <i class="bi <?= $isSchool ? 'bi-mortarboard-fill' : 'bi-card-checklist' ?> stat-bg"></i>
     </div>
   </div>
   <div class="col-6 col-lg-3">
     <div class="stat-card warning">
       <div class="d-flex align-items-start justify-content-between mb-3">
-        <div class="stat-icon" style="background:rgba(255,255,255,.2)"><i class="bi bi-calendar-x"></i></div>
+        <div class="stat-icon" style="background:rgba(255,255,255,.2)">
+          <i class="bi <?= $isSchool ? 'bi-cash-stack' : 'bi-calendar-x' ?>"></i>
+        </div>
       </div>
       <div class="stat-value"><?= $expiringSoon ?></div>
-      <div class="stat-label mt-1">Expiring in 30 Days</div>
-      <i class="bi bi-calendar-x stat-bg"></i>
+      <div class="stat-label mt-1"><?= $isSchool ? 'Fee Dues' : 'Expiring in 30 Days' ?></div>
+      <i class="bi <?= $isSchool ? 'bi-cash-stack' : 'bi-calendar-x' ?> stat-bg"></i>
     </div>
   </div>
   <div class="col-6 col-lg-3">
@@ -202,13 +232,15 @@ require_once APP_ROOT . '/includes/header.php';
   <div class="col-lg-7">
     <div class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-people me-2 text-primary"></i>Recent Members</span>
+        <span><i class="bi bi-people me-2 text-primary"></i><?= $isSchool ? 'Recent Students' : 'Recent Members' ?></span>
         <?php if ($inst['status'] === 'active'): ?>
         <div class="d-flex gap-2">
-          <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-sm btn-primary">
-            <i class="bi bi-plus me-1"></i>Add Member
+          <a href="<?= h(BASE_URL . ($isSchool ? '/app/services/students-add' : '/app/members/add')) ?>"
+             class="btn btn-sm btn-primary">
+            <i class="bi bi-plus me-1"></i><?= $isSchool ? 'Add Student' : 'Add Member' ?>
           </a>
-          <a href="<?= h(BASE_URL . '/app/members/list') ?>" class="btn btn-sm btn-outline-primary">All</a>
+          <a href="<?= h(BASE_URL . ($isSchool ? '/app/services/students' : '/app/members/list')) ?>"
+             class="btn btn-sm btn-outline-primary">All</a>
         </div>
         <?php endif; ?>
       </div>
@@ -219,9 +251,11 @@ require_once APP_ROOT . '/includes/header.php';
             <thead>
               <tr>
                 <th><?= memberLabel(false) ?></th>
-                <th>Code</th>
-                <th>Sport</th>
-                <th>Membership</th>
+                <?php if ($isSchool): ?>
+                <th>Admission No</th><th>Section</th>
+                <?php else: ?>
+                <th>Code</th><th>Sport</th><th>Membership</th>
+                <?php endif; ?>
               </tr>
             </thead>
             <tbody>
@@ -237,12 +271,13 @@ require_once APP_ROOT . '/includes/header.php';
                       <?= mb_strtoupper(mb_substr($m['first_name'], 0, 1)) ?>
                     </div>
                     <?php endif; ?>
-                    <div>
-                      <div class="fw-600 small"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></div>
-                      <div class="text-muted" style="font-size:.72rem;"><?= h($m['mobile']) ?></div>
-                    </div>
+                    <div class="fw-600 small"><?= h($m['first_name'] . ' ' . $m['last_name']) ?></div>
                   </div>
                 </td>
+                <?php if ($isSchool): ?>
+                <td class="small text-muted"><?= h($m['member_code'] ?? '—') ?></td>
+                <td class="small"><?= h(trim(($m['class_name'] ?? '') . ' ' . ($m['division_name'] ?? '')) ?: '—') ?></td>
+                <?php else: ?>
                 <td class="small text-muted"><?= h($m['member_code']) ?></td>
                 <td class="small"><?= h($m['sport_category'] ?? '—') ?></td>
                 <td>
@@ -252,6 +287,7 @@ require_once APP_ROOT . '/includes/header.php';
                     <span class="badge bg-secondary">No membership</span>
                   <?php endif; ?>
                 </td>
+                <?php endif; ?>
               </tr>
               <?php endforeach; ?>
             </tbody>
@@ -260,8 +296,8 @@ require_once APP_ROOT . '/includes/header.php';
         <?php else: ?>
         <div class="empty-state py-4">
           <i class="bi bi-people"></i>
-          <h6><?= $inst['status'] === 'active' ? 'No members yet' : 'Awaiting activation' ?></h6>
-          <p class="small"><?= $inst['status'] === 'active' ? 'Start adding members to your institution.' : 'Complete your profile to get approved.' ?></p>
+          <h6><?= $inst['status'] === 'active' ? ('No ' . strtolower(memberLabel()) . ' yet') : 'Awaiting activation' ?></h6>
+          <p class="small"><?= $inst['status'] === 'active' ? ('Start adding ' . strtolower(memberLabel()) . ' to your institution.') : 'Complete your profile to get approved.' ?></p>
         </div>
         <?php endif; ?>
       </div>
