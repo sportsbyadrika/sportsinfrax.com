@@ -102,6 +102,21 @@ if ($inst['status'] === 'active') {
     $recentMembers = $rmStmt->fetchAll();
 }
 
+// Upcoming holidays & events (next 45 days)
+$upcomingHolidays = [];
+if ($instId) {
+    $uhStmt = $db->prepare(
+        "SELECT *, DATEDIFF(holiday_date, CURDATE()) AS days_away
+         FROM holiday_calendar
+         WHERE institution_id = ? AND is_active = 1
+           AND holiday_date >= CURDATE()
+           AND holiday_date <= DATE_ADD(CURDATE(), INTERVAL 45 DAY)
+         ORDER BY holiday_date ASC LIMIT 12"
+    );
+    $uhStmt->execute([$instId]);
+    $upcomingHolidays = $uhStmt->fetchAll();
+}
+
 $pageTitle = 'Dashboard';
 require_once APP_ROOT . '/includes/header.php';
 ?>
@@ -185,6 +200,71 @@ require_once APP_ROOT . '/includes/header.php';
     </div>
   </div>
 </div>
+
+<?php if ($upcomingHolidays): ?>
+<!-- Upcoming Holidays & Events -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-calendar-event-fill me-2 text-danger"></i>Upcoming Holidays &amp; Events
+      <span class="badge bg-danger ms-1"><?= count($upcomingHolidays) ?></span>
+    </span>
+    <a href="<?= h(BASE_URL . '/app/settings/holidays') ?>"
+       class="btn btn-sm btn-outline-secondary">Manage</a>
+  </div>
+  <div class="card-body py-3">
+    <div class="d-flex flex-wrap gap-3">
+      <?php foreach ($upcomingHolidays as $uh):
+        $daysAway = (int)$uh['days_away'];
+        $dayLabel = match(true) {
+            $daysAway === 0 => 'Today',
+            $daysAway === 1 => 'Tomorrow',
+            default         => 'In ' . $daysAway . ' day' . ($daysAway > 1 ? 's' : ''),
+        };
+        $catColor = match($uh['category']) {
+            'public_holiday'      => 'danger',
+            'special_day'         => 'info',
+            'institution_holiday' => 'primary',
+            default               => 'warning',
+        };
+        $typeColor = ($uh['type'] === 'holiday') ? 'danger' : 'success';
+      ?>
+      <div class="d-flex align-items-center gap-2 px-3 py-2 rounded border"
+           style="min-width:200px;max-width:260px;">
+        <div class="text-center flex-shrink-0" style="min-width:38px;">
+          <div class="fw-bold fs-5 lh-1" style="color:var(--bs-<?= $catColor ?>);">
+            <?= date('d', strtotime($uh['holiday_date'])) ?>
+          </div>
+          <div class="text-muted" style="font-size:.72rem;text-transform:uppercase;">
+            <?= date('M', strtotime($uh['holiday_date'])) ?>
+          </div>
+        </div>
+        <div class="flex-grow-1 min-w-0">
+          <div class="fw-600 small text-truncate" title="<?= h($uh['name']) ?>">
+            <?= h($uh['name']) ?>
+          </div>
+          <div class="d-flex gap-1 flex-wrap mt-1">
+            <span class="badge bg-<?= $catColor ?> bg-opacity-10 text-<?= $catColor ?>"
+                  style="font-size:.65rem;">
+              <?= match($uh['category']) {
+                  'public_holiday'      => 'Public Holiday',
+                  'special_day'         => 'Special Day',
+                  'institution_holiday' => 'Institution',
+                  default               => 'Event',
+              } ?>
+            </span>
+            <?php if ($daysAway <= 7): ?>
+            <span class="badge bg-<?= $typeColor ?>" style="font-size:.65rem;">
+              <?= $dayLabel ?>
+            </span>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <div class="row g-4 mb-4">
 
