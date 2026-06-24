@@ -61,7 +61,7 @@ $navItems = match($userRole) {
 };
 ?>
 <nav class="navbar navbar-expand-lg app-navbar sticky-top">
-  <div class="container-xl">
+  <div class="container-fluid">
 
     <!-- Brand → Dashboard -->
     <a class="navbar-brand d-flex align-items-center gap-2" href="<?= h(dashboardUrl()) ?>">

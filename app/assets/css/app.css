@@ -159,6 +159,7 @@ body {
   margin-top: auto;
 }
 .app-footer .fw-semibold { color: #fff; }
+.footer-company-link:hover { color: #fff !important; text-decoration: underline !important; }
 
 /* ── Cards ─────────────────────────────────────────────── */
 .card {
