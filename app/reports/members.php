@@ -93,11 +93,11 @@ if ($output === 'print') {
 }
 
 // ── On-screen view ─────────────────────────────────────────
-$pageTitle   = 'Member Report';
+$pageTitle   = memberLabel(false) . ' Report';
 $breadcrumbs = [
     'Dashboard' => dashboardUrl(),
     'Reports'   => BASE_URL . '/app/reports',
-    'Members'   => '',
+    memberLabel() => '',
 ];
 require_once APP_ROOT . '/includes/header.php';
 
@@ -114,7 +114,7 @@ $exportBase = BASE_URL . '/app/reports/members?' . http_build_query(array_filter
 <div class="section-header-strip mb-4">
   <div class="section-icon"><i class="bi bi-people-fill"></i></div>
   <div>
-    <h4>Member Report</h4>
+    <h4><?= memberLabel(false) ?> Report</h4>
     <p>Filter and export member records for your institution.</p>
   </div>
 </div>

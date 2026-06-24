@@ -103,7 +103,7 @@ require_once APP_ROOT . '/includes/header.php';
   </div>
   <?php if ($inst && $inst['status'] === 'active'): ?>
   <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary">
-    <i class="bi bi-plus-circle me-2"></i>Add New Member
+    <i class="bi bi-plus-circle me-2"></i>Add New <?= memberLabel(false) ?>
   </a>
   <?php endif; ?>
 </div>
@@ -114,7 +114,7 @@ require_once APP_ROOT . '/includes/header.php';
     <div class="stat-card primary">
       <div class="stat-icon mb-2" style="background:rgba(255,255,255,.2)"><i class="bi bi-people-fill"></i></div>
       <div class="stat-value"><?= $totalMembers ?></div>
-      <div class="stat-label mt-1">Total Members</div>
+      <div class="stat-label mt-1">Total <?= memberLabel() ?></div>
       <i class="bi bi-people-fill stat-bg"></i>
     </div>
   </div>
@@ -157,7 +157,7 @@ require_once APP_ROOT . '/includes/header.php';
         <?php if ($expMembers): ?>
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Member</th><th>Plan</th><th>Expires</th></tr></thead>
+            <thead><tr><th><?= memberLabel(false) ?></th><th>Plan</th><th>Expires</th></tr></thead>
             <tbody>
               <?php foreach ($expMembers as $em): ?>
               <tr>
@@ -195,7 +195,7 @@ require_once APP_ROOT . '/includes/header.php';
         <?php if ($recentMembers): ?>
         <div class="table-responsive">
           <table class="table">
-            <thead><tr><th>Member</th><th>Code</th><th>Membership</th></tr></thead>
+            <thead><tr><th><?= memberLabel(false) ?></th><th>Code</th><th>Membership</th></tr></thead>
             <tbody>
               <?php foreach ($recentMembers as $m): ?>
               <tr>
@@ -222,7 +222,7 @@ require_once APP_ROOT . '/includes/header.php';
         <div class="empty-state py-4">
           <i class="bi bi-people"></i>
           <h6>No members yet</h6>
-          <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary btn-sm mt-2">Add Member</a>
+          <a href="<?= h(BASE_URL . '/app/members/add') ?>" class="btn btn-primary btn-sm mt-2">Add <?= memberLabel(false) ?></a>
         </div>
         <?php endif; ?>
       </div>
