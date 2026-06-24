@@ -124,27 +124,26 @@ function canDo(string $module, string $action, string $scope = 'all'): bool
 /**
  * Returns the context-appropriate label for "Member/Members".
  * School institutions use "Student/Students"; all others use "Member/Members".
- * Reads $_SESSION['inst_category']; if missing (pre-login or old session),
- * does a one-time DB lookup and caches the result in the session.
+ * Uses a per-request static cache; calls getInstitutionCategory() which is
+ * already cached via _institutionTypeRows() — no session dependency.
  */
 function memberLabel(bool $plural = true): string
 {
-    if (!isset($_SESSION['inst_category'])) {
-        $_SESSION['inst_category'] = 'general';
-        $instId = authInstId();
+    static $isSchool = null;
+    if ($isSchool === null) {
+        $isSchool = false;
+        $instId   = authInstId();
         if ($instId) {
             try {
                 $stmt = getDB()->prepare(
-                    "SELECT it.category FROM institutions i
-                     JOIN institution_types it ON it.value = i.institution_type
-                     WHERE i.id = ? LIMIT 1"
+                    "SELECT institution_type FROM institutions WHERE id = ? LIMIT 1"
                 );
                 $stmt->execute([$instId]);
-                $_SESSION['inst_category'] = $stmt->fetchColumn() ?: 'general';
-            } catch (Exception $e) { /* leave as 'general' */ }
+                $type     = $stmt->fetchColumn();
+                $isSchool = ($type !== false && getInstitutionCategory($type) === 'school');
+            } catch (Exception $e) { /* leave false */ }
         }
     }
-    $isSchool = ($_SESSION['inst_category'] === 'school');
     return $isSchool
         ? ($plural ? 'Students' : 'Student')
         : ($plural ? 'Members'  : 'Member');
