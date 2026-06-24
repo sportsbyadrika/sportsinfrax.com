@@ -50,15 +50,15 @@ $sectionDesc = match($category) {
     default       => 'Manage members, memberships and related information.',
 };
 
-$pageTitle   = 'Members';
-$breadcrumbs = ['Home' => dashboardUrl(), 'Members' => ''];
+$pageTitle   = memberLabel();
+$breadcrumbs = ['Home' => dashboardUrl(), memberLabel() => ''];
 require_once APP_ROOT . '/includes/header.php';
 ?>
 
 <div class="section-header-strip">
   <div class="section-icon"><i class="bi bi-people-fill"></i></div>
   <div>
-    <h4>Members</h4>
+    <h4><?= memberLabel() ?></h4>
     <p><?= h($sectionDesc) ?></p>
   </div>
 </div>

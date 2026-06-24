@@ -72,6 +72,20 @@ function loginUser(array $user): void
     $_SESSION['institution_id']  = $user['institution_id'] ?? null;
     $_SESSION['last_regenerated']= time();
 
+    // Cache institution category for label helpers (memberLabel etc.)
+    $_SESSION['inst_category'] = 'general';
+    if (!empty($user['institution_id'])) {
+        try {
+            $catStmt = getDB()->prepare(
+                "SELECT it.category FROM institutions i
+                 JOIN institution_types it ON it.value = i.institution_type
+                 WHERE i.id = ? LIMIT 1"
+            );
+            $catStmt->execute([$user['institution_id']]);
+            $_SESSION['inst_category'] = $catStmt->fetchColumn() ?: 'general';
+        } catch (Exception $e) { /* leave as 'general' */ }
+    }
+
     // Update last_login
     $db   = getDB();
     $stmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = ?");
@@ -105,6 +119,19 @@ function canDo(string $module, string $action, string $scope = 'all'): bool
     $instId = authInstId();
     if (!$userId || !$instId) return false;
     return hasStaffPermission($userId, $instId, $module . '.' . $action, $scope);
+}
+
+/**
+ * Returns the context-appropriate label for "Member/Members".
+ * School institutions use "Student/Students"; all others use "Member/Members".
+ * Reads from $_SESSION['inst_category'] set at login — no extra DB hit.
+ */
+function memberLabel(bool $plural = true): string
+{
+    $isSchool = (($_SESSION['inst_category'] ?? 'general') === 'school');
+    return $isSchool
+        ? ($plural ? 'Students' : 'Student')
+        : ($plural ? 'Members'  : 'Member');
 }
 
 /**

@@ -96,7 +96,7 @@ $fullName    = $ms['first_name'] . ' ' . $ms['last_name'];
 $pageTitle   = 'Add Payment – ' . $fullName;
 $breadcrumbs = [
     'Dashboard'  => dashboardUrl(),
-    'Members'    => BASE_URL . '/app/members/list',
+    memberLabel() => BASE_URL . '/app/members/list',
     $fullName    => BASE_URL . '/app/members/view?id=' . $memberId,
     'Add Payment'=> '',
 ];

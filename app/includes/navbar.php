@@ -45,14 +45,14 @@ $navItems = match($userRole) {
     ],
     'institution_admin' => array_values(array_filter([
         ['Institution', BASE_URL . '/app/institution-admin', 'institution'],
-        $instReady  ? ['Members',  BASE_URL . '/app/members',   'members']  : null,
+        $instReady  ? [memberLabel(),  BASE_URL . '/app/members',   'members']  : null,
         $instActive ? ['Services', BASE_URL . '/app/services',  'services'] : null,
         $instActive ? ['Accounts', BASE_URL . '/app/accounts',  'accounts'] : null,
         $instActive ? ['Reports',  BASE_URL . '/app/reports',   'reports']  : null,
         ['Settings',    BASE_URL . '/app/settings',             'settings'],
     ])),
     'staff' => array_values(array_filter([
-        $instActive ? ['Members',  BASE_URL . '/app/members',  'members']  : null,
+        $instActive ? [memberLabel(),  BASE_URL . '/app/members',  'members']  : null,
         $instActive ? ['Services', BASE_URL . '/app/services', 'services'] : null,
         $instActive ? ['Accounts', BASE_URL . '/app/accounts', 'accounts'] : null,
         $instActive ? ['Reports',  BASE_URL . '/app/reports',  'reports']  : null,

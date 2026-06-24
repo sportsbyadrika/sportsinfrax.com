@@ -37,7 +37,7 @@ $fullName    = $member['first_name'] . ' ' . $member['last_name'];
 $pageTitle   = $fullName;
 $breadcrumbs = [
     'Dashboard' => dashboardUrl(),
-    'Members'   => BASE_URL . '/app/members/list',
+    memberLabel() => BASE_URL . '/app/members/list',
     $fullName   => '',
 ];
 $pageAction  = '<div class="d-flex gap-2">

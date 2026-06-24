@@ -61,7 +61,7 @@ $fullName    = $member['first_name'] . ' ' . $member['last_name'];
 $pageTitle   = ($prevMs ? 'Renew Membership' : 'Add Membership') . ' – ' . $fullName;
 $breadcrumbs = [
     'Dashboard'            => dashboardUrl(),
-    'Members'              => BASE_URL . '/app/members/list',
+    memberLabel()          => BASE_URL . '/app/members/list',
     $fullName              => BASE_URL . '/app/members/view?id=' . $memberId,
     ($prevMs ? 'Renew' : 'Add Membership') => '',
 ];
