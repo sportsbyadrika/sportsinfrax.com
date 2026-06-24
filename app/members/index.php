@@ -22,8 +22,6 @@ $activeItems = getMenuItems('members', $category, $role, $userId, $instId);
 $comingSoon = [];
 if ($category === 'school') {
     $comingSoon = [
-        ['bi-person-plus-fill',       'linear-gradient(135deg,#0b5ed7,#1e78ff)', 'Student Admission',      'Register a new student with full details and documents.',          false],
-        ['bi-people-fill',            'linear-gradient(135deg,#059669,#10b981)', 'Student List',           'View, search and manage all enrolled students.',                   false],
         ['bi-mortarboard-fill',       'linear-gradient(135deg,#6f42c1,#9c68f0)', 'Student Promotion',      'Bulk promote students to the next class or level.',                true],
         ['bi-file-earmark-text-fill', 'linear-gradient(135deg,#d97706,#f59e0b)', 'Transfer Certificate',   'Issue and manage transfer certificates for students.',             true],
         ['bi-card-list',              'linear-gradient(135deg,#0891b2,#06b6d4)', 'ID Card Generation',     'Generate student identity cards in bulk.',                         true],
@@ -74,6 +72,25 @@ require_once APP_ROOT . '/includes/header.php';
 <?php foreach ($activeItems as $item): ?>
   <?= renderMenuHubCard($item) ?>
 <?php endforeach; ?>
+
+<?php if ($category === 'school'): ?>
+  <?= renderMenuHubCard([
+      'icon'          => 'bi-person-plus-fill',
+      'gradient'      => 'linear-gradient(135deg,#0b5ed7,#1e78ff)',
+      'label'         => 'Student Admission',
+      'description'   => 'Register a new student with full details and documents.',
+      'route'         => BASE_URL . '/app/services/students-add',
+      'required_role' => 'any',
+  ]) ?>
+  <?= renderMenuHubCard([
+      'icon'          => 'bi-people-fill',
+      'gradient'      => 'linear-gradient(135deg,#059669,#10b981)',
+      'label'         => 'Student List',
+      'description'   => 'View, search and manage all enrolled students.',
+      'route'         => BASE_URL . '/app/services/students',
+      'required_role' => 'any',
+  ]) ?>
+<?php endif; ?>
 
 <?php foreach ($comingSoon as [$icon, $gradient, $title, $desc, $adminOnly]): ?>
   <?php if ($adminOnly && !$isAdmin) continue; ?>
