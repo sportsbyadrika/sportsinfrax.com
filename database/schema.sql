@@ -690,6 +690,210 @@ CREATE TABLE IF NOT EXISTS `member_attendance` (
   CONSTRAINT `fk_ma_marked_by` FOREIGN KEY (`marked_by`)      REFERENCES `users`(`id`)               ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- -------------------------------------------------------
+-- From migration 008: Announcements
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `announcements` (
+  `id`             INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `institution_id` INT UNSIGNED  NOT NULL,
+  `title`          VARCHAR(200)  NOT NULL,
+  `body`           TEXT          NULL,
+  `type`           ENUM('announcement','notice','circular','event') NOT NULL DEFAULT 'announcement',
+  `audience`       ENUM('all','staff','students') NOT NULL DEFAULT 'all',
+  `is_pinned`      TINYINT(1)    NOT NULL DEFAULT 0,
+  `is_active`      TINYINT(1)    NOT NULL DEFAULT 1,
+  `published_at`   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at`     DATE          NULL DEFAULT NULL,
+  `created_by`     INT UNSIGNED  NULL DEFAULT NULL,
+  `created_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ann_inst_pub`  (`institution_id`, `is_active`, `published_at`),
+  CONSTRAINT `fk_ann_inst`    FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_ann_creator` FOREIGN KEY (`created_by`)     REFERENCES `users`(`id`)        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------
+-- From migration 009: Fee Management (School)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `fee_heads` (
+  `id`             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `institution_id` INT UNSIGNED     NOT NULL,
+  `name`           VARCHAR(100)     NOT NULL,
+  `description`    VARCHAR(300)     NULL DEFAULT NULL,
+  `frequency`      ENUM('monthly','quarterly','half_yearly','annual','one_time') NOT NULL DEFAULT 'monthly',
+  `default_amount` DECIMAL(10,2)    NOT NULL DEFAULT 0.00,
+  `sort_order`     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `is_active`      TINYINT(1)       NOT NULL DEFAULT 1,
+  `created_at`     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_fh_name` (`institution_id`, `name`),
+  CONSTRAINT `fk_fh_inst` FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `fee_payments` (
+  `id`               INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+  `institution_id`   INT UNSIGNED  NOT NULL,
+  `student_id`       INT UNSIGNED  NOT NULL,
+  `fee_head_id`      INT UNSIGNED  NOT NULL,
+  `academic_year_id` INT UNSIGNED  NULL DEFAULT NULL,
+  `period_label`     VARCHAR(20)   NULL DEFAULT NULL,
+  `amount`           DECIMAL(10,2) NOT NULL,
+  `payment_date`     DATE          NOT NULL,
+  `payment_mode`     ENUM('cash','card','upi','cheque','bank_transfer','other') NOT NULL DEFAULT 'cash',
+  `reference_no`     VARCHAR(100)  NULL DEFAULT NULL,
+  `receipt_no`       VARCHAR(50)   NULL DEFAULT NULL,
+  `remarks`          VARCHAR(300)  NULL DEFAULT NULL,
+  `collected_by`     INT UNSIGNED  NULL DEFAULT NULL,
+  `created_at`       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_fp_student`  (`institution_id`, `student_id`),
+  KEY `idx_fp_date`     (`institution_id`, `payment_date`),
+  KEY `idx_fp_head`     (`fee_head_id`),
+  CONSTRAINT `fk_fp_inst`      FOREIGN KEY (`institution_id`)   REFERENCES `institutions`(`id`)   ON DELETE CASCADE,
+  CONSTRAINT `fk_fp_student`   FOREIGN KEY (`student_id`)       REFERENCES `students`(`id`)       ON DELETE CASCADE,
+  CONSTRAINT `fk_fp_head`      FOREIGN KEY (`fee_head_id`)      REFERENCES `fee_heads`(`id`)      ON DELETE RESTRICT,
+  CONSTRAINT `fk_fp_ay`        FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years`(`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_fp_collector` FOREIGN KEY (`collected_by`)     REFERENCES `users`(`id`)          ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------
+-- From migration 010: Subjects (School)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `subjects` (
+  `id`             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `institution_id` INT UNSIGNED     NOT NULL,
+  `name`           VARCHAR(100)     NOT NULL,
+  `code`           VARCHAR(20)      NULL DEFAULT NULL,
+  `class_id`       INT UNSIGNED     NULL DEFAULT NULL,
+  `is_active`      TINYINT(1)       NOT NULL DEFAULT 1,
+  `sort_order`     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `created_at`     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_subj_name` (`institution_id`, `name`, `class_id`),
+  KEY `idx_subj_inst`       (`institution_id`, `is_active`),
+  CONSTRAINT `fk_subj_inst`  FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_subj_class` FOREIGN KEY (`class_id`)       REFERENCES `classes`(`id`)      ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `section_subjects` (
+  `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `section_id` INT UNSIGNED NOT NULL,
+  `subject_id` INT UNSIGNED NOT NULL,
+  `staff_id`   INT UNSIGNED NULL DEFAULT NULL,
+  `is_active`  TINYINT(1)   NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_ss_slot` (`section_id`, `subject_id`),
+  KEY `idx_ss_staff`      (`staff_id`),
+  CONSTRAINT `fk_ss_section` FOREIGN KEY (`section_id`) REFERENCES `sections`(`id`)  ON DELETE CASCADE,
+  CONSTRAINT `fk_ss_subject` FOREIGN KEY (`subject_id`) REFERENCES `subjects`(`id`)  ON DELETE CASCADE,
+  CONSTRAINT `fk_ss_staff`   FOREIGN KEY (`staff_id`)   REFERENCES `staff`(`id`)     ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------
+-- From migration 011: Timetable (School)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `timetable_periods` (
+  `id`             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `institution_id` INT UNSIGNED     NOT NULL,
+  `label`          VARCHAR(50)      NOT NULL,
+  `start_time`     TIME             NULL DEFAULT NULL,
+  `end_time`       TIME             NULL DEFAULT NULL,
+  `is_break`       TINYINT(1)       NOT NULL DEFAULT 0,
+  `sort_order`     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `is_active`      TINYINT(1)       NOT NULL DEFAULT 1,
+  `created_at`     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_tp_label` (`institution_id`, `label`),
+  CONSTRAINT `fk_tp_inst` FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `timetable_entries` (
+  `id`             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `institution_id` INT UNSIGNED     NOT NULL,
+  `section_id`     INT UNSIGNED     NOT NULL,
+  `day_of_week`    TINYINT UNSIGNED NOT NULL,
+  `period_id`      INT UNSIGNED     NOT NULL,
+  `subject_id`     INT UNSIGNED     NULL DEFAULT NULL,
+  `staff_id`       INT UNSIGNED     NULL DEFAULT NULL,
+  `created_at`     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_te_slot` (`section_id`, `day_of_week`, `period_id`),
+  KEY `idx_te_inst`       (`institution_id`),
+  KEY `idx_te_staff`      (`staff_id`),
+  CONSTRAINT `fk_te_inst`    FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`)      ON DELETE CASCADE,
+  CONSTRAINT `fk_te_section` FOREIGN KEY (`section_id`)     REFERENCES `sections`(`id`)          ON DELETE CASCADE,
+  CONSTRAINT `fk_te_period`  FOREIGN KEY (`period_id`)      REFERENCES `timetable_periods`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_te_subject` FOREIGN KEY (`subject_id`)     REFERENCES `subjects`(`id`)          ON DELETE SET NULL,
+  CONSTRAINT `fk_te_staff`   FOREIGN KEY (`staff_id`)       REFERENCES `staff`(`id`)             ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -------------------------------------------------------
+-- From migration 012: Exams & Marks (School)
+-- -------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `exam_types` (
+  `id`             INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+  `institution_id` INT UNSIGNED     NOT NULL,
+  `name`           VARCHAR(100)     NOT NULL,
+  `max_marks`      DECIMAL(6,2)     NOT NULL DEFAULT 100.00,
+  `pass_marks`     DECIMAL(6,2)     NOT NULL DEFAULT 35.00,
+  `is_grade_based` TINYINT(1)       NOT NULL DEFAULT 0,
+  `sort_order`     TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  `is_active`      TINYINT(1)       NOT NULL DEFAULT 1,
+  `created_at`     DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_et_name` (`institution_id`, `name`),
+  CONSTRAINT `fk_et_inst` FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `exams` (
+  `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `institution_id`   INT UNSIGNED NOT NULL,
+  `academic_year_id` INT UNSIGNED NULL DEFAULT NULL,
+  `exam_type_id`     INT UNSIGNED NOT NULL,
+  `section_id`       INT UNSIGNED NOT NULL,
+  `label`            VARCHAR(200) NOT NULL,
+  `start_date`       DATE         NULL DEFAULT NULL,
+  `end_date`         DATE         NULL DEFAULT NULL,
+  `is_published`     TINYINT(1)   NOT NULL DEFAULT 0,
+  `created_by`       INT UNSIGNED NULL DEFAULT NULL,
+  `created_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ex_inst`    (`institution_id`, `academic_year_id`),
+  KEY `idx_ex_section` (`section_id`),
+  CONSTRAINT `fk_ex_inst`    FOREIGN KEY (`institution_id`)   REFERENCES `institutions`(`id`)   ON DELETE CASCADE,
+  CONSTRAINT `fk_ex_ay`      FOREIGN KEY (`academic_year_id`) REFERENCES `academic_years`(`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_ex_type`    FOREIGN KEY (`exam_type_id`)     REFERENCES `exam_types`(`id`)     ON DELETE RESTRICT,
+  CONSTRAINT `fk_ex_section` FOREIGN KEY (`section_id`)       REFERENCES `sections`(`id`)       ON DELETE CASCADE,
+  CONSTRAINT `fk_ex_creator` FOREIGN KEY (`created_by`)       REFERENCES `users`(`id`)          ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `exam_marks` (
+  `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `exam_id`        INT UNSIGNED NOT NULL,
+  `institution_id` INT UNSIGNED NOT NULL,
+  `student_id`     INT UNSIGNED NOT NULL,
+  `subject_id`     INT UNSIGNED NOT NULL,
+  `marks_obtained` DECIMAL(6,2) NULL DEFAULT NULL,
+  `is_absent`      TINYINT(1)   NOT NULL DEFAULT 0,
+  `grade`          VARCHAR(5)   NULL DEFAULT NULL,
+  `remarks`        VARCHAR(200) NULL DEFAULT NULL,
+  `entered_by`     INT UNSIGNED NULL DEFAULT NULL,
+  `created_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_em_slot` (`exam_id`, `student_id`, `subject_id`),
+  KEY `idx_em_inst`       (`institution_id`),
+  CONSTRAINT `fk_em_exam`    FOREIGN KEY (`exam_id`)        REFERENCES `exams`(`id`)        ON DELETE CASCADE,
+  CONSTRAINT `fk_em_inst`    FOREIGN KEY (`institution_id`) REFERENCES `institutions`(`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_em_student` FOREIGN KEY (`student_id`)     REFERENCES `students`(`id`)     ON DELETE CASCADE,
+  CONSTRAINT `fk_em_subject` FOREIGN KEY (`subject_id`)     REFERENCES `subjects`(`id`)     ON DELETE RESTRICT,
+  CONSTRAINT `fk_em_enterer` FOREIGN KEY (`entered_by`)     REFERENCES `users`(`id`)        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- -------------------------------------------------------
@@ -819,7 +1023,90 @@ VALUES
    '/app/reports/attendance', 'bi-table',
    'linear-gradient(135deg,#0b5ed7,#1e78ff)',
    'Monthly attendance pivot for students or members by session.',
-   NULL, 'any', 21)
+   NULL, 'any', 21),
+
+  -- Announcements (migration 008)
+  ('services.manage_announcements', 'services', 'Manage Announcements',
+   '/app/institution-admin/announcements', 'bi-megaphone-fill',
+   'linear-gradient(135deg,#059669,#10b981)',
+   'Create and manage notices, circulars and announcements for your institution.',
+   NULL, 'institution_admin', 50),
+
+  ('services.announcements', 'services', 'Announcements',
+   '/app/services/announcements', 'bi-megaphone',
+   'linear-gradient(135deg,#0b5ed7,#1e78ff)',
+   'View notices and announcements from your institution.',
+   NULL, 'any', 51),
+
+  -- Fee Management (migration 009)
+  ('settings.fee_heads', 'settings', 'Fee Heads',
+   '/app/settings/fee-heads', 'bi-cash-coin',
+   'linear-gradient(135deg,#059669,#10b981)',
+   'Define fee categories (Tuition, Lab, Sports, etc.) and their default amounts.',
+   'school', 'institution_admin', 30),
+
+  ('services.fee_collection', 'services', 'Fee Collection',
+   '/app/services/fee-collection', 'bi-cash-stack',
+   'linear-gradient(135deg,#d97706,#f59e0b)',
+   'Record fee payments for students and issue receipts.',
+   'school', 'institution_admin', 30),
+
+  ('reports.fees', 'reports', 'Fee Report',
+   '/app/reports/fees', 'bi-file-earmark-text-fill',
+   'linear-gradient(135deg,#6f42c1,#9c68f0)',
+   'Monthly fee collection summary with payment-mode breakdown.',
+   'school', 'institution_admin', 30),
+
+  -- Subjects (migration 010)
+  ('settings.subjects', 'settings', 'Subjects',
+   '/app/settings/subjects', 'bi-book-fill',
+   'linear-gradient(135deg,#0b5ed7,#1e78ff)',
+   'Manage the subject master list for all classes in your institution.',
+   'school', 'institution_admin', 25),
+
+  ('services.section_subjects', 'services', 'Assign Subjects',
+   '/app/services/section-subjects', 'bi-journal-bookmark-fill',
+   'linear-gradient(135deg,#6f42c1,#9c68f0)',
+   'Assign subjects and teachers to each class section.',
+   'school', 'institution_admin', 12),
+
+  -- Timetable (migration 011)
+  ('settings.timetable_periods', 'settings', 'Timetable Periods',
+   '/app/settings/timetable-periods', 'bi-hourglass-split',
+   'linear-gradient(135deg,#dc3545,#e85d6f)',
+   'Define daily time slots (periods, lunch, recess) used in the timetable.',
+   'school', 'institution_admin', 26),
+
+  ('services.timetable', 'services', 'Timetable',
+   '/app/services/timetable', 'bi-calendar3-week-fill',
+   'linear-gradient(135deg,#0b5ed7,#1e78ff)',
+   'View and manage the weekly class timetable for each section.',
+   'school', 'any', 15),
+
+  -- Exams & Marks (migration 012)
+  ('settings.exam_types', 'settings', 'Exam Types',
+   '/app/settings/exam-types', 'bi-clipboard-check-fill',
+   'linear-gradient(135deg,#d97706,#f59e0b)',
+   'Define exam categories (Unit Test, Term Exam, Annual Exam) with pass criteria.',
+   'school', 'institution_admin', 27),
+
+  ('services.exams', 'services', 'Exams',
+   '/app/services/exams', 'bi-pencil-square',
+   'linear-gradient(135deg,#dc3545,#e85d6f)',
+   'Create and manage exam schedules for each section.',
+   'school', 'institution_admin', 40),
+
+  ('services.exam_marks', 'services', 'Enter Marks',
+   '/app/services/exam-marks', 'bi-input-cursor-text',
+   'linear-gradient(135deg,#6f42c1,#9c68f0)',
+   'Enter or edit student marks for a selected exam.',
+   'school', 'any', 41),
+
+  ('reports.exam_marks', 'reports', 'Marks Report',
+   '/app/reports/exam-marks', 'bi-bar-chart-line-fill',
+   'linear-gradient(135deg,#059669,#10b981)',
+   'Subject-wise marks report for a section exam with pass/fail summary.',
+   'school', 'any', 30)
 
 ON DUPLICATE KEY UPDATE
   `label`       = VALUES(`label`),

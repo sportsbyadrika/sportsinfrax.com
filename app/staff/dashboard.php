@@ -138,6 +138,24 @@ if ($instId) {
     $upcomingHolidays = $uhStmt->fetchAll();
 }
 
+// Recent announcements visible to staff
+$recentAnnouncements = [];
+if ($instId) {
+    $annStmt = $db->prepare(
+        "SELECT a.id, a.title, a.type, a.audience, a.is_pinned, a.published_at,
+                u.full_name AS author
+         FROM announcements a
+         LEFT JOIN users u ON u.id = a.created_by
+         WHERE a.institution_id = ? AND a.is_active = 1
+           AND a.audience IN ('all', 'staff')
+           AND (a.expires_at IS NULL OR a.expires_at >= CURDATE())
+         ORDER BY a.is_pinned DESC, a.published_at DESC
+         LIMIT 5"
+    );
+    $annStmt->execute([$instId]);
+    $recentAnnouncements = $annStmt->fetchAll();
+}
+
 $pageTitle = 'Staff Dashboard';
 require_once APP_ROOT . '/includes/header.php';
 ?>
@@ -255,6 +273,53 @@ require_once APP_ROOT . '/includes/header.php';
       </div>
       <?php endforeach; ?>
     </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php if ($recentAnnouncements): ?>
+<!-- Recent Announcements -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-megaphone-fill me-2 text-primary"></i>Announcements
+      <span class="badge bg-secondary ms-1"><?= count($recentAnnouncements) ?></span>
+    </span>
+    <a href="<?= h(BASE_URL . '/app/services/announcements') ?>"
+       class="btn btn-sm btn-outline-secondary">View All</a>
+  </div>
+  <div class="card-body p-0">
+    <ul class="list-group list-group-flush">
+      <?php foreach ($recentAnnouncements as $ann):
+        $typeBadge = match($ann['type']) {
+            'notice'   => 'warning text-dark',
+            'circular' => 'info text-dark',
+            'event'    => 'success',
+            default    => 'primary',
+        };
+      ?>
+      <li class="list-group-item py-2 <?= $ann['is_pinned'] ? 'border-start border-warning border-3' : '' ?>">
+        <div class="d-flex align-items-start gap-2">
+          <?php if ($ann['is_pinned']): ?>
+          <i class="bi bi-pin-angle-fill text-warning mt-1 flex-shrink-0"></i>
+          <?php endif; ?>
+          <div class="flex-grow-1 min-w-0">
+            <div class="d-flex align-items-center gap-1 flex-wrap mb-1">
+              <span class="badge bg-<?= $typeBadge ?>" style="font-size:.65rem;">
+                <?= ucfirst($ann['type']) ?>
+              </span>
+              <span class="fw-600 small text-truncate"><?= h($ann['title']) ?></span>
+            </div>
+            <div class="text-muted" style="font-size:.72rem;">
+              <?= h(fmtDate($ann['published_at'])) ?>
+              <?php if ($ann['author']): ?>
+              &middot; <?= h($ann['author']) ?>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+      </li>
+      <?php endforeach; ?>
+    </ul>
   </div>
 </div>
 <?php endif; ?>

@@ -44,11 +44,14 @@ $currentPerms = array_column($permStmt->fetchAll(), 'scope', 'module');
 // Module registry — extend as new modules are built
 $modules = [];
 if ($isSchool) {
-    $modules['students']   = ['label' => 'Students',   'icon' => 'bi-mortarboard-fill',   'desc' => 'Add, view and edit student records.',          'ready' => true];
-    $modules['attendance'] = ['label' => 'Attendance', 'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view student attendance records.',    'ready' => true];
-    $modules['subjects']   = ['label' => 'Subjects',   'icon' => 'bi-book-fill',           'desc' => 'Manage subject master and assignments.',        'ready' => false];
+    $modules['students']    = ['label' => 'Students',    'icon' => 'bi-mortarboard-fill',    'desc' => 'Add, view and edit student records.',              'ready' => true];
+    $modules['attendance']  = ['label' => 'Attendance',  'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view student attendance records.',        'ready' => true];
+    $modules['subjects']    = ['label' => 'Subjects',    'icon' => 'bi-book-fill',           'desc' => 'Manage subject master and assignments.',            'ready' => true];
+    $modules['timetable']   = ['label' => 'Timetable',   'icon' => 'bi-calendar3-week-fill', 'desc' => 'View and manage the weekly class timetable.',       'ready' => true];
+    $modules['exam_marks']  = ['label' => 'Exam Marks',  'icon' => 'bi-pencil-square',       'desc' => 'Enter and view student exam marks.',                'ready' => true];
+    $modules['fee_collection'] = ['label' => 'Fee Collection', 'icon' => 'bi-cash-stack',    'desc' => 'Record and view student fee payments.',             'ready' => false];
 } else {
-    $modules['attendance'] = ['label' => 'Attendance', 'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view member attendance records.',     'ready' => true];
+    $modules['attendance']  = ['label' => 'Attendance',  'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view member attendance records.',         'ready' => true];
 }
 
 $levels = [
