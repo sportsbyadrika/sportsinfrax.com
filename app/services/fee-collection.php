@@ -607,6 +607,152 @@ require_once APP_ROOT . '/includes/header.php';
   </div>
 </div>
 
+<!-- ── Transport Fees ─────────────────────────────────────────────────── -->
+<?php if ($transAssign): ?>
+<div class="card mt-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-bus-front-fill text-warning"></i>
+    <span>Transport Fees</span>
+    <span class="badge bg-warning text-dark ms-1"><?= h($transAssign['route_name']) ?></span>
+    <span class="text-muted small ms-auto"><?= h($transAssign['year_label']) ?></span>
+  </div>
+  <div class="card-body">
+
+    <!-- Route info strip -->
+    <div class="d-flex flex-wrap gap-3 mb-3 small text-muted">
+      <span><i class="bi bi-signpost-2 me-1"></i><?= h($transAssign['route_name']) ?></span>
+      <?php if ($transAssign['stop_name']): ?>
+      <span><i class="bi bi-geo-alt me-1"></i>Stop: <?= h($transAssign['stop_name']) ?></span>
+      <?php endif; ?>
+      <?php if ($transAssign['driver_name']): ?>
+      <span><i class="bi bi-person me-1"></i>Driver: <?= h($transAssign['driver_name']) ?>
+        <?= $transAssign['driver_phone'] ? ' · ' . h($transAssign['driver_phone']) : '' ?>
+      </span>
+      <?php endif; ?>
+      <?php if ($transAssign['fee_amount']): ?>
+      <span class="fw-600 text-dark"><i class="bi bi-currency-rupee"></i><?= number_format((float)$transAssign['fee_amount'], 2) ?>
+        / <?= h($freqLabels[$transAssign['fee_freq']] ?? $transAssign['fee_freq']) ?>
+      </span>
+      <?php endif; ?>
+    </div>
+
+    <div class="row g-4">
+      <!-- Record transport payment -->
+      <div class="col-lg-5">
+        <div class="card border">
+          <div class="card-header small"><i class="bi bi-plus-circle me-1 text-primary"></i>Record Transport Payment</div>
+          <div class="card-body">
+            <form method="POST">
+              <?= csrfField() ?>
+              <input type="hidden" name="action" value="transport_payment">
+              <input type="hidden" name="student_id" value="<?= (int)$student['id'] ?>">
+              <input type="hidden" name="assign_id" value="<?= (int)$transAssign['assign_id'] ?>">
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label small">Period <span class="required">*</span></label>
+                  <input type="text" class="form-control form-control-sm" name="t_period_label"
+                         placeholder="e.g. Jun 2024" maxlength="30" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Amount (₹) <span class="required">*</span></label>
+                  <input type="number" class="form-control form-control-sm" name="t_amount"
+                         step="0.01" min="0.01"
+                         value="<?= $transAssign['fee_amount'] ? h($transAssign['fee_amount']) : '' ?>"
+                         placeholder="0.00" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Date <span class="required">*</span></label>
+                  <input type="date" class="form-control form-control-sm" name="t_payment_date"
+                         value="<?= date('Y-m-d') ?>" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Mode</label>
+                  <select class="form-select form-select-sm" name="t_payment_mode">
+                    <?php foreach ($modeLabels as $val => $lbl): ?>
+                    <option value="<?= $val ?>"><?= $lbl ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Reference No.</label>
+                  <input type="text" class="form-control form-control-sm" name="t_reference_no"
+                         placeholder="UTR / cheque no." maxlength="80">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Receipt No.</label>
+                  <input type="text" class="form-control form-control-sm" name="t_receipt_no"
+                         maxlength="40">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Remarks</label>
+                  <input type="text" class="form-control form-control-sm" name="t_remarks"
+                         maxlength="255">
+                </div>
+              </div>
+              <div class="mt-2">
+                <button type="submit" class="btn btn-sm btn-warning text-dark">
+                  <i class="bi bi-cash me-1"></i>Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transport payment history -->
+      <div class="col-lg-7">
+        <div class="card border">
+          <div class="card-header small">
+            <i class="bi bi-clock-history me-1 text-primary"></i>Transport Payment History
+            <span class="badge bg-secondary ms-1"><?= count($transPayments) ?></span>
+          </div>
+          <div class="card-body p-0">
+            <?php if ($transPayments): ?>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead class="table-light">
+                  <tr><th>Date</th><th>Period</th><th>Amount</th><th>Mode</th><th>Receipt</th><th>By</th><th></th></tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($transPayments as $tp): ?>
+                  <tr>
+                    <td class="text-nowrap small"><?= fmtDate($tp['payment_date'], 'd M Y') ?></td>
+                    <td class="small"><?= h($tp['period_label']) ?></td>
+                    <td class="fw-600 text-success small">₹<?= number_format((float)$tp['amount'], 2) ?></td>
+                    <td><span class="badge bg-secondary bg-opacity-75 small"><?= h($modeLabels[$tp['payment_mode']] ?? $tp['payment_mode']) ?></span></td>
+                    <td class="small text-muted"><?= $tp['receipt_no'] ? h($tp['receipt_no']) : '—' ?></td>
+                    <td class="small text-muted"><?= $tp['collected_by_name'] ? h($tp['collected_by_name']) : '—' ?></td>
+                    <td>
+                      <form method="POST" class="d-inline">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="transport_delete">
+                        <input type="hidden" name="student_id" value="<?= (int)$student['id'] ?>">
+                        <input type="hidden" name="t_pay_id" value="<?= (int)$tp['id'] ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger btn-icon"
+                                data-confirm="Delete this transport payment?">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+            <?php else: ?>
+            <div class="empty-state py-3">
+              <i class="bi bi-receipt"></i>
+              <p class="small mb-0">No transport payments recorded.</p>
+            </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+    </div><!-- /row -->
+  </div>
+</div>
+<?php endif; ?>
+
 <?php elseif (!$search): ?>
 <!-- Default empty state -->
 <div class="card">
