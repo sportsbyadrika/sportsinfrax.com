@@ -72,6 +72,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: ' . BASE_URL . '/app/services/fee-collection?student_id=' . $studentId);
         exit;
+
+    } elseif ($action === 'transport_payment' && $studentId) {
+        $assignId    = (int)($_POST['assign_id']    ?? 0);
+        $periodLabel = trim($_POST['t_period_label'] ?? '');
+        $amount      = $_POST['t_amount']            ?? '';
+        $paymentDate = trim($_POST['t_payment_date'] ?? '');
+        $paymentMode = $_POST['t_payment_mode']      ?? 'cash';
+        $referenceNo = trim($_POST['t_reference_no'] ?? '');
+        $receiptNo   = trim($_POST['t_receipt_no']   ?? '');
+        $remarks     = trim($_POST['t_remarks']      ?? '');
+
+        $validModes = ['cash','card','upi','cheque','bank_transfer','other'];
+        $err = '';
+        if (!$assignId)                                           $err = 'Invalid assignment.';
+        elseif (!$periodLabel)                                    $err = 'Period label is required.';
+        elseif (!is_numeric($amount) || (float)$amount <= 0)     $err = 'Amount must be greater than zero.';
+        elseif (!$paymentDate)                                    $err = 'Payment date is required.';
+        elseif (!in_array($paymentMode, $validModes, true))      $err = 'Invalid payment mode.';
+
+        if (!$err) {
+            // Verify assignment belongs to institution + student
+            $aChk = $db->prepare(
+                "SELECT id FROM transport_student_assignments
+                 WHERE id = ? AND student_id = ? AND institution_id = ?"
+            );
+            $aChk->execute([$assignId, $studentId, $instId]);
+            if (!$aChk->fetch()) $err = 'Assignment not found.';
+        }
+
+        if ($err) {
+            setFlash('error', $err);
+        } else {
+            $db->prepare(
+                "INSERT INTO transport_fee_payments
+                     (institution_id, student_id, assignment_id, period_label, amount,
+                      payment_date, payment_mode, reference_no, receipt_no, remarks, collected_by)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+            )->execute([
+                $instId, $studentId, $assignId, $periodLabel,
+                number_format((float)$amount, 2, '.', ''),
+                $paymentDate, $paymentMode,
+                $referenceNo ?: null, $receiptNo ?: null, $remarks ?: null,
+                authId(),
+            ]);
+            setFlash('success', 'Transport payment recorded.');
+        }
+        header('Location: ' . BASE_URL . '/app/services/fee-collection?student_id=' . $studentId);
+        exit;
+
+    } elseif ($action === 'transport_delete') {
+        $tPayId = (int)($_POST['t_pay_id'] ?? 0);
+        if ($tPayId) {
+            $db->prepare(
+                "DELETE FROM transport_fee_payments WHERE id = ? AND institution_id = ?"
+            )->execute([$tPayId, $instId]);
+            setFlash('success', 'Transport payment deleted.');
+        }
+        header('Location: ' . BASE_URL . '/app/services/fee-collection?student_id=' . $studentId);
+        exit;
     }
 }
 
@@ -84,6 +143,8 @@ $studentSection = '';
 $feeHeads       = [];
 $payments       = [];
 $searchResults  = [];
+$transAssign    = null;
+$transPayments  = [];
 
 // Load active fee heads (always needed for the add-payment select)
 $fhStmt = $db->prepare(
@@ -165,6 +226,40 @@ if ($studentId) {
         );
         $phStmt->execute([$instId, $studentId]);
         $payments = $phStmt->fetchAll();
+
+        // Transport assignment for current/latest academic year
+        $taStmt = $db->prepare(
+            "SELECT tsa.id AS assign_id, tsa.route_id, tsa.stop_id, tsa.academic_year_id,
+                    tsa.assigned_from, tsa.remarks AS assign_remarks,
+                    tr.name AS route_name, tr.driver_name, tr.driver_phone,
+                    trs.stop_name,
+                    ay.label AS year_label,
+                    trf.amount AS fee_amount, trf.frequency AS fee_freq
+             FROM transport_student_assignments tsa
+             JOIN transport_routes tr ON tr.id = tsa.route_id
+             LEFT JOIN transport_route_stops trs ON trs.id = tsa.stop_id
+             JOIN academic_years ay ON ay.id = tsa.academic_year_id
+             LEFT JOIN transport_route_fees trf ON trf.route_id = tsa.route_id
+                   AND trf.academic_year_id = tsa.academic_year_id AND trf.is_active = 1
+             WHERE tsa.student_id = ? AND tsa.institution_id = ? AND tsa.is_active = 1
+             ORDER BY ay.is_current DESC, ay.label DESC
+             LIMIT 1"
+        );
+        $taStmt->execute([$studentId, $instId]);
+        $transAssign = $taStmt->fetch();
+
+        if ($transAssign) {
+            $tpStmt = $db->prepare(
+                "SELECT tfp.*, u.full_name AS collected_by_name
+                 FROM transport_fee_payments tfp
+                 LEFT JOIN users u ON u.id = tfp.collected_by
+                 WHERE tfp.institution_id = ? AND tfp.student_id = ?
+                 ORDER BY tfp.payment_date DESC, tfp.id DESC
+                 LIMIT 20"
+            );
+            $tpStmt->execute([$instId, $studentId]);
+            $transPayments = $tpStmt->fetchAll();
+        }
     }
 }
 
@@ -511,6 +606,152 @@ require_once APP_ROOT . '/includes/header.php';
     <?php endif; ?>
   </div>
 </div>
+
+<!-- ── Transport Fees ─────────────────────────────────────────────────── -->
+<?php if ($transAssign): ?>
+<div class="card mt-4">
+  <div class="card-header d-flex align-items-center gap-2">
+    <i class="bi bi-bus-front-fill text-warning"></i>
+    <span>Transport Fees</span>
+    <span class="badge bg-warning text-dark ms-1"><?= h($transAssign['route_name']) ?></span>
+    <span class="text-muted small ms-auto"><?= h($transAssign['year_label']) ?></span>
+  </div>
+  <div class="card-body">
+
+    <!-- Route info strip -->
+    <div class="d-flex flex-wrap gap-3 mb-3 small text-muted">
+      <span><i class="bi bi-signpost-2 me-1"></i><?= h($transAssign['route_name']) ?></span>
+      <?php if ($transAssign['stop_name']): ?>
+      <span><i class="bi bi-geo-alt me-1"></i>Stop: <?= h($transAssign['stop_name']) ?></span>
+      <?php endif; ?>
+      <?php if ($transAssign['driver_name']): ?>
+      <span><i class="bi bi-person me-1"></i>Driver: <?= h($transAssign['driver_name']) ?>
+        <?= $transAssign['driver_phone'] ? ' · ' . h($transAssign['driver_phone']) : '' ?>
+      </span>
+      <?php endif; ?>
+      <?php if ($transAssign['fee_amount']): ?>
+      <span class="fw-600 text-dark"><i class="bi bi-currency-rupee"></i><?= number_format((float)$transAssign['fee_amount'], 2) ?>
+        / <?= h($freqLabels[$transAssign['fee_freq']] ?? $transAssign['fee_freq']) ?>
+      </span>
+      <?php endif; ?>
+    </div>
+
+    <div class="row g-4">
+      <!-- Record transport payment -->
+      <div class="col-lg-5">
+        <div class="card border">
+          <div class="card-header small"><i class="bi bi-plus-circle me-1 text-primary"></i>Record Transport Payment</div>
+          <div class="card-body">
+            <form method="POST">
+              <?= csrfField() ?>
+              <input type="hidden" name="action" value="transport_payment">
+              <input type="hidden" name="student_id" value="<?= (int)$student['id'] ?>">
+              <input type="hidden" name="assign_id" value="<?= (int)$transAssign['assign_id'] ?>">
+              <div class="row g-2">
+                <div class="col-12">
+                  <label class="form-label small">Period <span class="required">*</span></label>
+                  <input type="text" class="form-control form-control-sm" name="t_period_label"
+                         placeholder="e.g. Jun 2024" maxlength="30" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Amount (₹) <span class="required">*</span></label>
+                  <input type="number" class="form-control form-control-sm" name="t_amount"
+                         step="0.01" min="0.01"
+                         value="<?= $transAssign['fee_amount'] ? h($transAssign['fee_amount']) : '' ?>"
+                         placeholder="0.00" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Date <span class="required">*</span></label>
+                  <input type="date" class="form-control form-control-sm" name="t_payment_date"
+                         value="<?= date('Y-m-d') ?>" required>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Mode</label>
+                  <select class="form-select form-select-sm" name="t_payment_mode">
+                    <?php foreach ($modeLabels as $val => $lbl): ?>
+                    <option value="<?= $val ?>"><?= $lbl ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Reference No.</label>
+                  <input type="text" class="form-control form-control-sm" name="t_reference_no"
+                         placeholder="UTR / cheque no." maxlength="80">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Receipt No.</label>
+                  <input type="text" class="form-control form-control-sm" name="t_receipt_no"
+                         maxlength="40">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Remarks</label>
+                  <input type="text" class="form-control form-control-sm" name="t_remarks"
+                         maxlength="255">
+                </div>
+              </div>
+              <div class="mt-2">
+                <button type="submit" class="btn btn-sm btn-warning text-dark">
+                  <i class="bi bi-cash me-1"></i>Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transport payment history -->
+      <div class="col-lg-7">
+        <div class="card border">
+          <div class="card-header small">
+            <i class="bi bi-clock-history me-1 text-primary"></i>Transport Payment History
+            <span class="badge bg-secondary ms-1"><?= count($transPayments) ?></span>
+          </div>
+          <div class="card-body p-0">
+            <?php if ($transPayments): ?>
+            <div class="table-responsive">
+              <table class="table table-sm mb-0">
+                <thead class="table-light">
+                  <tr><th>Date</th><th>Period</th><th>Amount</th><th>Mode</th><th>Receipt</th><th>By</th><th></th></tr>
+                </thead>
+                <tbody>
+                  <?php foreach ($transPayments as $tp): ?>
+                  <tr>
+                    <td class="text-nowrap small"><?= fmtDate($tp['payment_date'], 'd M Y') ?></td>
+                    <td class="small"><?= h($tp['period_label']) ?></td>
+                    <td class="fw-600 text-success small">₹<?= number_format((float)$tp['amount'], 2) ?></td>
+                    <td><span class="badge bg-secondary bg-opacity-75 small"><?= h($modeLabels[$tp['payment_mode']] ?? $tp['payment_mode']) ?></span></td>
+                    <td class="small text-muted"><?= $tp['receipt_no'] ? h($tp['receipt_no']) : '—' ?></td>
+                    <td class="small text-muted"><?= $tp['collected_by_name'] ? h($tp['collected_by_name']) : '—' ?></td>
+                    <td>
+                      <form method="POST" class="d-inline">
+                        <?= csrfField() ?>
+                        <input type="hidden" name="action" value="transport_delete">
+                        <input type="hidden" name="student_id" value="<?= (int)$student['id'] ?>">
+                        <input type="hidden" name="t_pay_id" value="<?= (int)$tp['id'] ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-danger btn-icon"
+                                data-confirm="Delete this transport payment?">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+            <?php else: ?>
+            <div class="empty-state py-3">
+              <i class="bi bi-receipt"></i>
+              <p class="small mb-0">No transport payments recorded.</p>
+            </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      </div>
+    </div><!-- /row -->
+  </div>
+</div>
+<?php endif; ?>
 
 <?php elseif (!$search): ?>
 <!-- Default empty state -->

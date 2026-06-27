@@ -50,6 +50,7 @@ if ($isSchool) {
     $modules['timetable']   = ['label' => 'Timetable',   'icon' => 'bi-calendar3-week-fill', 'desc' => 'View and manage the weekly class timetable.',       'ready' => true];
     $modules['exam_marks']  = ['label' => 'Exam Marks',  'icon' => 'bi-pencil-square',       'desc' => 'Enter and view student exam marks.',                'ready' => true];
     $modules['fee_collection'] = ['label' => 'Fee Collection', 'icon' => 'bi-cash-stack',    'desc' => 'Record and view student fee payments.',             'ready' => false];
+    $modules['transport']      = ['label' => 'Transport',     'icon' => 'bi-bus-front-fill', 'desc' => 'Manage transport assignments and fee collection.',   'ready' => true];
 } else {
     $modules['attendance']  = ['label' => 'Attendance',  'icon' => 'bi-calendar-check-fill', 'desc' => 'Mark and view member attendance records.',         'ready' => true];
 }
