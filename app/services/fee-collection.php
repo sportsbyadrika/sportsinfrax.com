@@ -72,6 +72,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         header('Location: ' . BASE_URL . '/app/services/fee-collection?student_id=' . $studentId);
         exit;
+
+    } elseif ($action === 'transport_payment' && $studentId) {
+        $assignId    = (int)($_POST['assign_id']    ?? 0);
+        $periodLabel = trim($_POST['t_period_label'] ?? '');
+        $amount      = $_POST['t_amount']            ?? '';
+        $paymentDate = trim($_POST['t_payment_date'] ?? '');
+        $paymentMode = $_POST['t_payment_mode']      ?? 'cash';
+        $referenceNo = trim($_POST['t_reference_no'] ?? '');
+        $receiptNo   = trim($_POST['t_receipt_no']   ?? '');
+        $remarks     = trim($_POST['t_remarks']      ?? '');
+
+        $validModes = ['cash','card','upi','cheque','bank_transfer','other'];
+        $err = '';
+        if (!$assignId)                                           $err = 'Invalid assignment.';
+        elseif (!$periodLabel)                                    $err = 'Period label is required.';
+        elseif (!is_numeric($amount) || (float)$amount <= 0)     $err = 'Amount must be greater than zero.';
+        elseif (!$paymentDate)                                    $err = 'Payment date is required.';
+        elseif (!in_array($paymentMode, $validModes, true))      $err = 'Invalid payment mode.';
+
+        if (!$err) {
+            // Verify assignment belongs to institution + student
+            $aChk = $db->prepare(
+                "SELECT id FROM transport_student_assignments
+                 WHERE id = ? AND student_id = ? AND institution_id = ?"
+            );
+            $aChk->execute([$assignId, $studentId, $instId]);
+            if (!$aChk->fetch()) $err = 'Assignment not found.';
+        }
+
+        if ($err) {
+            setFlash('error', $err);
+        } else {
+            $db->prepare(
+                "INSERT INTO transport_fee_payments
+                     (institution_id, student_id, assignment_id, period_label, amount,
+                      payment_date, payment_mode, reference_no, receipt_no, remarks, collected_by)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+            )->execute([
+                $instId, $studentId, $assignId, $periodLabel,
+                number_format((float)$amount, 2, '.', ''),
+                $paymentDate, $paymentMode,
+                $referenceNo ?: null, $receiptNo ?: null, $remarks ?: null,
+                authId(),
+            ]);
+            setFlash('success', 'Transport payment recorded.');
+        }
+        header('Location: ' . BASE_URL . '/app/services/fee-collection?student_id=' . $studentId);
+        exit;
+
+    } elseif ($action === 'transport_delete') {
+        $tPayId = (int)($_POST['t_pay_id'] ?? 0);
+        if ($tPayId) {
+            $db->prepare(
+                "DELETE FROM transport_fee_payments WHERE id = ? AND institution_id = ?"
+            )->execute([$tPayId, $instId]);
+            setFlash('success', 'Transport payment deleted.');
+        }
+        header('Location: ' . BASE_URL . '/app/services/fee-collection?student_id=' . $studentId);
+        exit;
     }
 }
 
@@ -84,6 +143,8 @@ $studentSection = '';
 $feeHeads       = [];
 $payments       = [];
 $searchResults  = [];
+$transAssign    = null;
+$transPayments  = [];
 
 // Load active fee heads (always needed for the add-payment select)
 $fhStmt = $db->prepare(
@@ -165,6 +226,40 @@ if ($studentId) {
         );
         $phStmt->execute([$instId, $studentId]);
         $payments = $phStmt->fetchAll();
+
+        // Transport assignment for current/latest academic year
+        $taStmt = $db->prepare(
+            "SELECT tsa.id AS assign_id, tsa.route_id, tsa.stop_id, tsa.academic_year_id,
+                    tsa.assigned_from, tsa.remarks AS assign_remarks,
+                    tr.name AS route_name, tr.driver_name, tr.driver_phone,
+                    trs.stop_name,
+                    ay.label AS year_label,
+                    trf.amount AS fee_amount, trf.frequency AS fee_freq
+             FROM transport_student_assignments tsa
+             JOIN transport_routes tr ON tr.id = tsa.route_id
+             LEFT JOIN transport_route_stops trs ON trs.id = tsa.stop_id
+             JOIN academic_years ay ON ay.id = tsa.academic_year_id
+             LEFT JOIN transport_route_fees trf ON trf.route_id = tsa.route_id
+                   AND trf.academic_year_id = tsa.academic_year_id AND trf.is_active = 1
+             WHERE tsa.student_id = ? AND tsa.institution_id = ? AND tsa.is_active = 1
+             ORDER BY ay.is_current DESC, ay.label DESC
+             LIMIT 1"
+        );
+        $taStmt->execute([$studentId, $instId]);
+        $transAssign = $taStmt->fetch();
+
+        if ($transAssign) {
+            $tpStmt = $db->prepare(
+                "SELECT tfp.*, u.full_name AS collected_by_name
+                 FROM transport_fee_payments tfp
+                 LEFT JOIN users u ON u.id = tfp.collected_by
+                 WHERE tfp.institution_id = ? AND tfp.student_id = ?
+                 ORDER BY tfp.payment_date DESC, tfp.id DESC
+                 LIMIT 20"
+            );
+            $tpStmt->execute([$instId, $studentId]);
+            $transPayments = $tpStmt->fetchAll();
+        }
     }
 }
 
