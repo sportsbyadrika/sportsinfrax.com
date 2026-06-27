@@ -135,35 +135,36 @@ CREATE TABLE IF NOT EXISTS transport_fee_payments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── Menu items ────────────────────────────────────────────────────────────────
-INSERT INTO menu_items
-  (slug, section, label, route, icon, gradient, description, applies_to_category, min_role, sort_order)
+INSERT INTO `menu_items`
+  (`item_key`, `parent_menu`, `label`, `route`, `icon`, `gradient`,
+   `description`, `applies_to_category`, `required_role`, `sort_order`)
 VALUES
-  ('settings.transport_vehicles',    'settings', 'Vehicles',
-   '/app/settings/transport-vehicles',     'bi-truck',
+  ('settings.transport_vehicles', 'settings', 'Vehicles',
+   '/app/settings/transport-vehicles', 'bi-truck',
    'linear-gradient(135deg,#0b5ed7,#1e78ff)',
    'Manage your fleet: add vehicles, track compliance dates.',
    'school', 'institution_admin', 73),
 
-  ('settings.transport_routes',      'settings', 'Transport Routes',
-   '/app/settings/transport-routes',       'bi-signpost-2-fill',
+  ('settings.transport_routes', 'settings', 'Transport Routes',
+   '/app/settings/transport-routes', 'bi-signpost-2-fill',
    'linear-gradient(135deg,#059669,#10b981)',
    'Define bus routes, stops, and per-year fee rates.',
    'school', 'institution_admin', 74),
 
-  ('services.vehicle_service',       'services', 'Vehicle Service Log',
-   '/app/services/vehicle-service',        'bi-tools',
+  ('services.vehicle_service', 'services', 'Vehicle Service Log',
+   '/app/services/vehicle-service', 'bi-tools',
    'linear-gradient(135deg,#dc3545,#e85d6f)',
    'Log and track vehicle maintenance, repairs, and renewals.',
    'school', 'institution_admin', 53),
 
   ('services.transport_assignments', 'services', 'Transport Assignments',
-   '/app/services/transport-assignments',  'bi-bus-front-fill',
+   '/app/services/transport-assignments', 'bi-bus-front-fill',
    'linear-gradient(135deg,#d97706,#f59e0b)',
    'Assign students to bus routes for the academic year.',
    'school', 'any', 54),
 
-  ('reports.transport_fees',         'reports',  'Transport Fee Report',
-   '/app/reports/transport-fees',          'bi-bus-front',
+  ('reports.transport_fees', 'reports', 'Transport Fee Report',
+   '/app/reports/transport-fees', 'bi-bus-front',
    'linear-gradient(135deg,#6f42c1,#9c68f0)',
    'Route-wise and student-wise transport fee collection summary.',
    'school', 'institution_admin', 35)

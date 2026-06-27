@@ -1248,7 +1248,7 @@ VALUES
    'Subject-wise marks report for a section exam with pass/fail summary.',
    'school', 'any', 30),
 
-  -- Fleet / Transport (migration 013)
+  -- Fleet / Transport (migration 013) — columns match (`item_key`, `parent_menu`, ..., `required_role`, `sort_order`)
   ('settings.transport_vehicles', 'settings', 'Vehicles',
    '/app/settings/transport-vehicles', 'bi-truck',
    'linear-gradient(135deg,#0b5ed7,#1e78ff)',
