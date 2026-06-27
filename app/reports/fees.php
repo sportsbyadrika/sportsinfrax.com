@@ -108,7 +108,7 @@ if ($hasFilters) {
                 CONCAT(s.first_name, ' ', s.last_name) AS student_name,
                 s.admission_number,
                 fh.name AS fee_head_name,
-                CONCAT(u.first_name, ' ', u.last_name) AS collected_by_name
+                u.full_name AS collected_by_name
          FROM fee_payments fp
          JOIN students s  ON s.id  = fp.student_id
          JOIN fee_heads fh ON fh.id = fp.fee_head_id

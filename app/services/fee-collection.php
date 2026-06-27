@@ -155,7 +155,7 @@ if ($studentId) {
             "SELECT fp.id, fp.payment_date, fp.amount, fp.payment_mode, fp.period_label,
                     fp.reference_no, fp.receipt_no,
                     fh.name AS fee_head_name,
-                    CONCAT(u.first_name, ' ', u.last_name) AS collected_by_name
+                    u.full_name AS collected_by_name
              FROM fee_payments fp
              JOIN fee_heads fh ON fh.id = fp.fee_head_id
              LEFT JOIN users u ON u.id = fp.collected_by
