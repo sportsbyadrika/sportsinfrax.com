@@ -61,15 +61,21 @@ if ($filterAyId) {
     $sectionRows = $secStmt->fetchAll();
 }
 
-// Validate section belongs to institution + selected year
+// Validate section belongs to institution — query directly, independent of year filter
 $currentSection = null;
-if ($filterSectionId && $sectionRows) {
-    foreach ($sectionRows as $sr) {
-        if ((int)$sr['id'] === $filterSectionId) {
-            $currentSection = $sr;
-            break;
-        }
-    }
+if ($filterSectionId) {
+    $csStmt = $db->prepare(
+        "SELECT sec.id, cls.name AS class_name, dv.name AS div_name,
+                ay.label AS year_label, ay.id AS ay_id
+         FROM sections sec
+         JOIN classes cls ON cls.id = sec.class_id
+         JOIN divisions dv ON dv.id = sec.division_id
+         JOIN academic_years ay ON ay.id = sec.academic_year_id
+         WHERE sec.id = ? AND sec.institution_id = ?"
+    );
+    $csStmt->execute([$filterSectionId, $instId]);
+    $row = $csStmt->fetch();
+    $currentSection = is_array($row) ? $row : null;
     if (!$currentSection) $filterSectionId = 0;
 }
 
